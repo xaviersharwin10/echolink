@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNotification } from '@blockscout/app-sdk';
 import { useAccount, useContractWrite, useWaitForTransaction, useContractRead } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 import { QUERY_PAYMENTS_ADDRESS, QUERY_PAYMENTS_ABI, ECHOLNK_NFT_ADDRESS } from '../config/contracts';
+import { EchoAnalytics } from './EchoAnalytics';
 
 const PYUSD_ADDRESS = '0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9';
 const PYUSD_DECIMALS = 6;
@@ -137,6 +139,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
   const [paymentTxHash, setPaymentTxHash] = useState<`0x${string}` | undefined>();
 
   const { address, isConnected } = useAccount();
+  const { openTxToast } = useNotification();
 
   // ✅ Fetch Echo data (creator address) from EchoNFT contract
   const { data: echoData, isError: echoDataError, isLoading: echoDataLoading } = useContractRead({
@@ -228,6 +231,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
             args: [creatorAddress as `0x${string}`, amount, tokenId], // ✅ Using dynamic creator address
           });
           console.log('✅ Payment transaction sent:', paymentTx.hash);
+          openTxToast("11155111", paymentTx.hash);
           setPaymentTxHash(paymentTx.hash);
           setPaymentStep('paying');
         } catch (error: any) {
@@ -362,6 +366,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
       });
       
       console.log('✅ Approval transaction sent:', approveTx.hash);
+      openTxToast("11155111", approveTx.hash); // "11155111" is the chain ID for Sepolia
       setApproveTxHash(approveTx.hash);
       
     } catch (error: any) {
@@ -418,6 +423,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <h2 className="text-2xl font-bold mb-4">Chat with Echo #{tokenId.toString()}</h2>
+      {creatorAddress && <EchoAnalytics creatorAddress={creatorAddress} tokenId={tokenId} />}
 
       {/* ✅ Echo Info Display */}
       <div className="mb-4 p-4 bg-purple-50 rounded-lg border border-purple-200">

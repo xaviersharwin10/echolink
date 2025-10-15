@@ -5,7 +5,8 @@ import "@rainbow-me/rainbowkit/styles.css";
 import "./App.css";
 import { wagmiConfig, chains } from "./config/wagmi";
 import { MintEcho } from "./components/MintEcho";
-import { EchoSelector } from "./components/EchoSelector";
+import { TransactionPopupProvider, NotificationProvider } from "@blockscout/app-sdk";
+import { EchoGallery } from "./components/EchoGallery";
 
 function App() {
   const [activeTab, setActiveTab] = useState<'mint' | 'chat'>('mint');
@@ -13,6 +14,8 @@ function App() {
   return (
     <WagmiConfig config={wagmiConfig}>
       <RainbowKitProvider chains={chains}>
+        <NotificationProvider>
+        <TransactionPopupProvider>
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
           {/* Header */}
           <header className="bg-white shadow-sm">
@@ -59,7 +62,7 @@ function App() {
             {/* Tab Content */}
             <div className="bg-white rounded-lg shadow-lg p-6">
               {activeTab === 'mint' && <MintEcho />}
-              {activeTab === 'chat' && <EchoSelector />}
+              {activeTab === 'chat' && <EchoGallery />}
             </div>
 
             {/* Info Section */}
@@ -81,6 +84,8 @@ function App() {
             </p>
           </footer>
         </div>
+        </TransactionPopupProvider>
+        </NotificationProvider>
       </RainbowKitProvider>
     </WagmiConfig>
   );

@@ -7,9 +7,11 @@ import { wagmiConfig, chains } from "./config/wagmi";
 import { MintEcho } from "./components/MintEcho";
 import { TransactionPopupProvider, NotificationProvider } from "@blockscout/app-sdk";
 import { EchoGallery } from "./components/EchoGallery";
+import { DiscoveryPage } from "./components/DiscoveryPage";
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'mint' | 'chat'>('mint');
+  //const [activeTab, setActiveTab] = useState<'mint' | 'chat'>('mint');
+  const [activeTab, setActiveTab] = useState<'mint' | 'gallery' | 'analyst'>('gallery');
 
   return (
     <WagmiConfig config={wagmiConfig}>
@@ -47,14 +49,22 @@ function App() {
                   🎨 Mint Echo
                 </button>
                 <button
-                  onClick={() => setActiveTab('chat')}
+                  onClick={() => setActiveTab('gallery')}
                   className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
-                    activeTab === 'chat'
+                    activeTab === 'gallery'
                       ? 'border-b-2 border-blue-600 text-blue-600'
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
                   💬 Chat with Echos
+                </button>
+                  <button
+                  onClick={() => setActiveTab('analyst')}
+                  className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
+                    activeTab === 'analyst' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  🔬 AI Analyst
                 </button>
               </nav>
             </div>
@@ -62,7 +72,8 @@ function App() {
             {/* Tab Content */}
             <div className="bg-white rounded-lg shadow-lg p-6">
               {activeTab === 'mint' && <MintEcho />}
-              {activeTab === 'chat' && <EchoGallery />}
+              {activeTab === 'gallery' && <EchoGallery />}
+              {activeTab === 'analyst' && <DiscoveryPage />}
             </div>
 
             {/* Info Section */}

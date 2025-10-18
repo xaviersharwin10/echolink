@@ -30,7 +30,7 @@ export const EchoGallery: React.FC = () => {
       const foundEchos: EchoInfo[] = [];
 
       // Loop from token ID 1 to 10
-      for (let i = 1; i <= 10; i++) {
+      for (let i = 1; i <= 5; i++) {
         const tokenId = BigInt(i);
         try {
           const owner = await readContract({

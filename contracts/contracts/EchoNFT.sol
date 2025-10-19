@@ -13,6 +13,9 @@ contract EchoNFT is ERC721, Ownable {
     // PYUSD token address for payments
     IERC20 public immutable pyusdToken;
 
+    // Array to track all token IDs
+    uint256[] private _allTokenIds;
+
     // A struct to hold data about each Echo
     struct EchoData {
         string name;
@@ -67,6 +70,9 @@ contract EchoNFT is ERC721, Ownable {
         // Mark token ID as used
         _usedTokenIds[tokenId] = true;
 
+        // Add to token IDs array
+        _allTokenIds.push(tokenId);
+
         _safeMint(creator, tokenId); // Mints the NFT to the creator's address
 
         // Store the associated data on-chain
@@ -114,6 +120,41 @@ contract EchoNFT is ERC721, Ownable {
     ) public view returns (string memory name, string memory description, address creator, uint256 pricePerQuery, bool isActive) {
         EchoData memory data = echoData[tokenId];
         return (data.name, data.description, data.creator, data.pricePerQuery, data.isActive);
+    }
+
+    /**
+     * @dev Get all echoes with their data
+     */
+    function getAllEchoes() public view returns (
+        uint256[] memory tokenIds,
+        string[] memory names,
+        string[] memory descriptions,
+        address[] memory creators,
+        uint256[] memory pricesPerQuery,
+        bool[] memory activeStatuses
+    ) {
+        uint256 length = _allTokenIds.length;
+        
+        tokenIds = new uint256[](length);
+        names = new string[](length);
+        descriptions = new string[](length);
+        creators = new address[](length);
+        pricesPerQuery = new uint256[](length);
+        activeStatuses = new bool[](length);
+        
+        for (uint256 i = 0; i < length; i++) {
+            uint256 tokenId = _allTokenIds[i];
+            EchoData memory data = echoData[tokenId];
+            
+            tokenIds[i] = tokenId;
+            names[i] = data.name;
+            descriptions[i] = data.description;
+            creators[i] = data.creator;
+            pricesPerQuery[i] = data.pricePerQuery;
+            activeStatuses[i] = data.isActive;
+        }
+        
+        return (tokenIds, names, descriptions, creators, pricesPerQuery, activeStatuses);
     }
 
     /**

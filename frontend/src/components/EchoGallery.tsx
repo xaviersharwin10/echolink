@@ -2,12 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { readContract } from '@wagmi/core';
 import { EchoCard, EchoInfo } from './EchoCard';
 import { ChatInterface } from './ChatInterface';
-import { ECHOLNK_NFT_ADDRESS } from '../config/contracts';
+import { ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI } from '../config/contracts';
 
-const ECHO_NFT_ABI = [
-  { "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}], "name": "getEchoData", "outputs": [{"internalType": "string", "name": "knowledgeHash", "type": "string"}, {"internalType": "address", "name": "creator", "type": "address"}], "stateMutability": "view", "type": "function" },
-  { "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}], "name": "ownerOf", "outputs": [{"internalType": "address", "name": "", "type": "address"}], "stateMutability": "view", "type": "function" }
-];
 const API_BASE_URL = 'https://eth-sepolia.blockscout.com/api/v2';
 const ACTIVITY_THRESHOLD = 3;
 const PYUSD_TOKEN_ADDRESS = '0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9';
@@ -29,45 +25,78 @@ export const EchoGallery: React.FC = () => {
       setIsScanning(true);
       const foundEchos: EchoInfo[] = [];
 
-      // Loop from token ID 1 to 10
-      for (let i = 1; i <= 5; i++) {
-        const tokenId = BigInt(i);
-        try {
-          const owner = await readContract({
-            address: ECHOLNK_NFT_ADDRESS as `0x${string}`, abi: ECHO_NFT_ABI, functionName: 'ownerOf', args: [tokenId],
-          });
-          const echoData = await readContract({
-            address: ECHOLNK_NFT_ADDRESS as `0x${string}`, abi: ECHO_NFT_ABI, functionName: 'getEchoData', args: [tokenId],
-          });
-          const creator = (echoData as [string, string])[1];
+      try {
+        // Get all Echos from the contract in one call
+        const allEchoesData = await readContract({
+          address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
+          abi: ECHO_NFT_ABI,
+          functionName: 'getAllEchoes',
+        });
 
-          // STEP 2: Fetch the creator's activity from Blockscout
+        const [tokenIds, names, descriptions, creators, pricesPerQuery, activeStatuses] = allEchoesData as [
+          bigint[], string[], string[], `0x${string}`[], bigint[], boolean[]
+        ];
 
+        console.log('📊 Retrieved all Echos:', {
+          count: tokenIds.length,
+          tokenIds: tokenIds.map(id => id.toString()),
+          names,
+          creators: creators.map(addr => `${addr.slice(0, 6)}...${addr.slice(-4)}`)
+        });
 
-          const activityRes = await fetch(`${API_BASE_URL}/addresses/${creator}/token-transfers?token=${PYUSD_TOKEN_ADDRESS}`);
-          const activityData = await activityRes.json();
-          const incomingTransfers = activityData?.items.filter((tx: any) => tx.to.hash.toLowerCase() === creator.toLowerCase());
+        // Process each Echo
+        for (let i = 0; i < tokenIds.length; i++) {
+          const tokenId = Number(tokenIds[i]);
+          const name = names[i];
+          const description = descriptions[i];
+          const creator = creators[i];
+          const pricePerQuery = pricesPerQuery[i];
+          const isActive = activeStatuses[i];
 
-          const isCreatorActive = (incomingTransfers.length || 0) > ACTIVITY_THRESHOLD;
-          
-          // STEP 3: Combine all data into one object
-          const hardcoded = hardcodedData[i] || {
-            name: `Creator's Echo #${i}`,
-            description: "An AI entity containing a unique body of knowledge, ready for you to explore.",
-            imageUrl: `https://source.unsplash.com/random/800x600?sig=${i}`
-          };
-          
-          foundEchos.push({
-            tokenId: i,
-            owner: owner as string,
-            creator: creator,
-            isCreatorActive: isCreatorActive,
-            ...hardcoded
-          });
+          try {
+            // Fetch the creator's activity from Blockscout
+            const activityRes = await fetch(`${API_BASE_URL}/addresses/${creator}/token-transfers?token=${PYUSD_TOKEN_ADDRESS}`);
+            const activityData = await activityRes.json();
+            const incomingTransfers = activityData?.items.filter((tx: any) => tx.to.hash.toLowerCase() === creator.toLowerCase());
 
-        } catch (error) {
-          console.log(`Token #${i} not found or failed to load. Skipping.`);
+            const isCreatorActive = (incomingTransfers.length || 0) > ACTIVITY_THRESHOLD;
+            
+            // Use hardcoded data if available, otherwise use contract data
+            const hardcoded = hardcodedData[tokenId] || {
+              name: name || `Echo #${tokenId}`,
+              description: description || "An AI entity containing a unique body of knowledge, ready for you to explore.",
+              imageUrl: `https://source.unsplash.com/random/800x600?sig=${tokenId}`
+            };
+            
+            foundEchos.push({
+              tokenId: tokenId,
+              owner: creator, // Using creator as owner since we don't have ownerOf in the ABI
+              creator: creator,
+              isCreatorActive: isCreatorActive,
+              ...hardcoded
+            });
+
+          } catch (error) {
+            console.log(`Failed to fetch activity data for creator ${creator}. Skipping.`);
+            // Still add the Echo even if activity data fails
+            const hardcoded = hardcodedData[tokenId] || {
+              name: name || `Echo #${tokenId}`,
+              description: description || "An AI entity containing a unique body of knowledge, ready for you to explore.",
+              imageUrl: `https://source.unsplash.com/random/800x600?sig=${tokenId}`
+            };
+            
+            foundEchos.push({
+              tokenId: tokenId,
+              owner: creator,
+              creator: creator,
+              isCreatorActive: false, // Default to false if we can't fetch activity
+              ...hardcoded
+            });
+          }
         }
+
+      } catch (error) {
+        console.error('❌ Failed to fetch all Echos:', error);
       }
 
       setAvailableEchos(foundEchos);
@@ -113,7 +142,7 @@ export const EchoGallery: React.FC = () => {
     {!isScanning && availableEchos.length === 0 && (
         <div className="text-center text-gray-500 bg-gray-100 p-8 rounded-lg mt-8">
           <h3 className="text-xl font-semibold text-gray-700">No Echos Found</h3>
-          <p className="mt-2">It looks like there are no Echos minted in the first 10 token IDs. <br /> Be the first to mint one!</p>
+          <p className="mt-2">It looks like there are no Echos minted yet. <br /> Be the first to mint one!</p>
         </div>
       )}
 

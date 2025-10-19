@@ -38,11 +38,11 @@ export const EchoCard: React.FC<EchoCardProps> = ({ echo, onSelect }) => {
       style={{ background: generateGradient(tokenId) }}
     >
       <div className="p-5">
-        <img
+        {/* <img
           src={imageUrl}
           alt={name}
           className="w-full h-48 rounded-lg object-cover mb-4"
-        />
+        /> */}
         <h3 className="text-2xl font-bold text-gray-800">{name}</h3>
         <p className="text-sm text-gray-500 mb-4">ECHO #{tokenId}</p>
         <p className="text-gray-600 text-base mb-5 h-20">{description}</p>

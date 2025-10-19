@@ -26,21 +26,12 @@ export const EchoSelector: React.FC = () => {
   // --- useContractRead setup for dynamic token checking ---
   const [checkId, setCheckId] = useState<bigint | null>(null);
 
-  const { data: ownerData, error: ownerError } = useContractRead({
-    address: ECHO_NFT_ADDRESS as `0x${string}`,
-    abi: ECHO_NFT_ABI,
-    functionName: 'ownerOf',
-    args: checkId ? [checkId] : undefined,
-    enabled: !!checkId,
-    watch: false,
-  });
-
   const { data: echoData, error: echoError } = useContractRead({
     address: ECHO_NFT_ADDRESS as `0x${string}`,
     abi: ECHO_NFT_ABI,
     functionName: 'getEchoData',
     args: checkId ? [checkId] : undefined,
-    enabled: !!checkId && !!ownerData,
+    enabled: !!checkId,
     watch: false,
   });
 
@@ -52,13 +43,11 @@ export const EchoSelector: React.FC = () => {
       // wait a tiny bit for hooks to update
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      if (!ownerData || ownerError) return null;
       if (!echoData || echoError) return null;
 
-      const owner = ownerData as string;
       const [name, description, creator, pricePerQuery, isActive] = echoData as [string, string, `0x${string}`, bigint, boolean];
       console.log('🔍 Echo data:', { creator, name, description, pricePerQuery, isActive });
-      return { tokenId, creator, name, description, pricePerQuery, isActive, owner };
+      return { tokenId, creator, name, description, pricePerQuery, isActive, owner: creator };
     } catch (err) {
       console.error(`❌ Error checking token ${tokenId}:`, err);
       return null;

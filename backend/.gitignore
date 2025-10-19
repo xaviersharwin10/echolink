@@ -1,2 +1,40 @@
 /node_modules
 .env
+
+src/poc/venv
+
+src/poc/__pycache__
+
+# Hardhat files
+/cache
+/artifacts
+
+# TypeChain files
+/typechain
+/typechain-types
+
+package-lock.json
+
+# solidity-coverage files
+/coverage
+/coverage.json
+
+# Hardhat Ignition default folder for deployments against a local node
+ignition/deployments/chain-31337
+
+temp
+
+uploads
+
+# Ignore all fact_index files with .faiss extension
+fact_index*.faiss
+
+# Ignore all fact_mapping files with .json extension
+fact_mapping*.json
+
+# Ignore all knowledge base files with .db extension
+knowledge_base*.db
+
+package.json.local
+
+.gitignore.local

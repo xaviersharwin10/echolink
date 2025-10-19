@@ -1,0 +1,33 @@
+# EchoLink ASI Alliance uAgent Dependencies
+
+# Fetch.ai uAgents Framework
+uagents>=0.12.0
+
+# MeTTa/Hyperon Symbolic Reasoning
+hyperon>=0.2.8
+
+# NLP & Transformers
+transformers>=4.30.0
+torch>=2.0.0
+sentencepiece>=0.2.0
+
+# LangChain for RAG
+langchain>=0.1.0
+langchain-community>=0.0.20
+langchain-huggingface>=0.0.1
+
+# Vector Store
+faiss-cpu>=1.8.0
+
+# Web3 for Blockchain
+web3>=6.0.0
+
+# ASI:One LLM (via OpenAI client)
+openai>=1.0.0
+
+# Utilities
+python-dotenv>=1.0.0
+
+# Additional for HuggingFace embeddings
+huggingface-hub>=0.20.0
+

@@ -1,6 +1,6 @@
 // Contract configuration
 // Update this address after deploying your contract
-export const ECHOLNK_NFT_ADDRESS = "0xA27c8d3dd5979f4451f3eA714efe7Fa01640e40b" as `0x${string}`;
+export const ECHOLNK_NFT_ADDRESS = "0x7f10Df09c2d91C8C6A8B8e1ECeAD336eE39C3c9f" as `0x${string}`;
 export const QUERY_PAYMENTS_ADDRESS = "0xFf08e351Bf16fE0703108cf9B4AeDe3a16fd0a46" as `0x${string}`;
 
 export const ECHO_NFT_ABI = [
@@ -55,9 +55,29 @@ export const ECHO_NFT_ABI = [
   },
   {
     "inputs": [],
-    "name": "pyusdToken",
-    "outputs": [{ "internalType": "contract IERC20", "name": "", "type": "address" }],
-    "stateMutability": "view",
+    "name": "withdrawPYUSD",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "uint256", "name": "pyusdAmount", "type": "uint256" }
+    ],
+    "name": "purchaseCredits",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "address", "name": "user", "type": "address" },
+      { "internalType": "uint256", "name": "echoId", "type": "uint256" },
+      { "internalType": "uint256", "name": "creditsToUse", "type": "uint256" }
+    ],
+    "name": "useCreditsForQuery",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -69,7 +89,9 @@ export const ECHO_NFT_ABI = [
       { "internalType": "uint256", "name": "pricePerQuery", "type": "uint256" }
     ],
     "name": "safeMint",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "outputs": [
+      { "internalType": "uint256", "name": "", "type": "uint256" }
+    ],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -86,10 +108,26 @@ export const ECHO_NFT_ABI = [
     "type": "function"
   },
   {
-    "inputs": [{ "internalType": "uint256", "name": "tokenId", "type": "uint256" }],
+    "inputs": [
+      { "internalType": "uint256", "name": "tokenId", "type": "uint256" }
+    ],
     "name": "toggleEchoActive",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getAllEchoes",
+    "outputs": [
+      { "internalType": "uint256[]", "name": "tokenIds", "type": "uint256[]" },
+      { "internalType": "string[]", "name": "names", "type": "string[]" },
+      { "internalType": "string[]", "name": "descriptions", "type": "string[]" },
+      { "internalType": "address[]", "name": "creators", "type": "address[]" },
+      { "internalType": "uint256[]", "name": "pricesPerQuery", "type": "uint256[]" },
+      { "internalType": "bool[]", "name": "activeStatuses", "type": "bool[]" }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -108,25 +146,9 @@ export const ECHO_NFT_ABI = [
     "type": "function"
   },
   {
-    "inputs": [{ "internalType": "uint256", "name": "pyusdAmount", "type": "uint256" }],
-    "name": "purchaseCredits",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [
-      { "internalType": "address", "name": "user", "type": "address" },
-      { "internalType": "uint256", "name": "echoId", "type": "uint256" },
-      { "internalType": "uint256", "name": "creditsToUse", "type": "uint256" }
+      { "internalType": "address", "name": "user", "type": "address" }
     ],
-    "name": "useCreditsForQuery",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{ "internalType": "address", "name": "user", "type": "address" }],
     "name": "getUserCredits",
     "outputs": [
       { "internalType": "uint256", "name": "balance", "type": "uint256" },
@@ -137,37 +159,27 @@ export const ECHO_NFT_ABI = [
   },
   {
     "inputs": [],
-    "name": "withdrawPYUSD",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "name": "pyusdToken",
+    "outputs": [
+      { "internalType": "contract IERC20", "name": "", "type": "address" }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "owner",
-    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "outputs": [
+      { "internalType": "address", "name": "", "type": "address" }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "renounceOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{ "internalType": "address", "name": "newOwner", "type": "address" }],
     "name": "transferOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{ "internalType": "uint256", "name": "tokenId", "type": "uint256" }],
-    "name": "ownerOf",
-    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
-    "stateMutability": "view",
     "type": "function"
   }
 ] as const;

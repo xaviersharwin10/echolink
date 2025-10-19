@@ -8,9 +8,10 @@ import { TransactionPopupProvider, NotificationProvider } from "@blockscout/app-
 import { CreatorStudio } from "./components/CreatorStudio";
 import { EchoGallery } from "./components/EchoGallery";
 import { CreditManager } from "./components/CreditManager";
+import { DiscoveryPage } from "./components/DiscoveryPage";
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'mint' | 'gallery' | 'credits'>('mint');
+  const [activeTab, setActiveTab] = useState<'mint' | 'gallery' | 'credits' | 'analyst'>('mint');
 
   return (
     <WagmiConfig config={wagmiConfig}>
@@ -67,6 +68,16 @@ function App() {
                 >
                   💳 Credits
                 </button>
+                <button
+                  onClick={() => setActiveTab('analyst')}
+                  className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
+                    activeTab === 'analyst'
+                      ? 'border-b-2 border-blue-600 text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  🔬 AI Analyst
+                </button>
               </nav>
             </div>
 
@@ -75,6 +86,7 @@ function App() {
               {activeTab === 'mint' && <CreatorStudio />}
               {activeTab === 'gallery' && <EchoGallery />}
               {activeTab === 'credits' && <CreditManager />}
+              {activeTab === 'analyst' && <DiscoveryPage />}
             </div>
 
             {/* Info Section */}
@@ -85,6 +97,7 @@ function App() {
                 <li>🎨 <strong>Step 2:</strong> Go to "Mint Echo" tab to upload your knowledge and create an Echo NFT</li>
                 <li>💳 <strong>Step 3:</strong> Use "Credits" tab to purchase credits for seamless query payments</li>
                 <li>💬 <strong>Step 4:</strong> Use "Chat with Echos" tab to browse and chat with available Echos</li>
+                <li>🔬 <strong>Step 5:</strong> Use "AI Analyst" tab to ask questions about on-chain activity and get insights</li>
                 <li>💰 <strong>Payment Options:</strong> Pay per query with PYUSD or use credits for convenience</li>
                 <li>📁 <strong>Supported Files:</strong> TXT, PDF, DOCX, MP4, MOV, MP3, WAV</li>
               </ul>

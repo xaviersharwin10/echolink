@@ -30,8 +30,8 @@ const sepolia = {
     decimals: 18,
   },
   rpcUrls: {
-    default: { http: ["https://eth-sepolia.g.alchemy.com/v2/"] },
-    public: { http: ["https://eth-sepolia.g.alchemy.com/v2/"] },
+    default: { http: ["https://eth-sepolia.g.alchemy.com/v2/472NtbGQX-PS0AyJjYV5qBMx9mfg78Le"] },
+    public: { http: ["https://eth-sepolia.g.alchemy.com/v2/472NtbGQX-PS0AyJjYV5qBMx9mfg78Le"] },
   },
 };
 
@@ -42,7 +42,7 @@ const { chains, publicClient } = configureChains(
 
 const { connectors } = getDefaultWallets({
   appName: "EchoLink Protocol",
-  projectId: "",
+  projectId: "1a240ae3b33be6f8e103b0ab20f114af",
   chains,
 });
 

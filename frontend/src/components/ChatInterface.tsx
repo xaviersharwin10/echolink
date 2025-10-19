@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNotification } from '@blockscout/app-sdk';
 import { useAccount, useContractWrite, useWaitForTransaction, useContractRead } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
-import { QUERY_PAYMENTS_ADDRESS, QUERY_PAYMENTS_ABI, ECHOLNK_NFT_ADDRESS } from '../config/contracts';
+import { QUERY_PAYMENTS_ADDRESS, QUERY_PAYMENTS_ABI, ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI } from '../config/contracts';
 import { EchoAnalytics } from './EchoAnalytics';
 
 const PYUSD_ADDRESS = '0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9';
@@ -40,82 +40,8 @@ const PYUSD_ABI = [
 
 // ✅ EchoNFT ABI - Add your actual contract address
 const ECHO_NFT_ADDRESS = ECHOLNK_NFT_ADDRESS; // TODO: Replace this
-const ECHO_NFT_ABI = [
-  // --- ERC721 Standard Functions ---
-  {
-    "inputs": [{ "internalType": "uint256", "name": "tokenId", "type": "uint256" }],
-    "name": "ownerOf",
-    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }],
-    "name": "balanceOf",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
-  },
-
-  // --- Custom EchoNFT Functions ---
-  {
-    "inputs": [
-      { "internalType": "address", "name": "creator", "type": "address" },
-      { "internalType": "string", "name": "knowledgeHash", "type": "string" }
-    ],
-    "name": "safeMint",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-
-  // ✅ Replaced problematic echoData mapping getter with explicit getter function
-  {
-    "inputs": [{ "internalType": "uint256", "name": "tokenId", "type": "uint256" }],
-    "name": "getEchoData",
-    "outputs": [
-      { "internalType": "string", "name": "knowledgeHash", "type": "string" },
-      { "internalType": "address", "name": "creator", "type": "address" }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-
-  // --- Metadata ---
-  {
-    "inputs": [],
-    "name": "name",
-    "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "symbol",
-    "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
-    "stateMutability": "view",
-    "type": "function"
-  },
-
-  // --- Ownership ---
-  {
-    "inputs": [],
-    "name": "owner",
-    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [{ "internalType": "address", "name": "newOwner", "type": "address" }],
-    "name": "transferOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
-];
 
 const QUERY_PAYMENTS_CONTRACT_ADDRESS = QUERY_PAYMENTS_ADDRESS;
-const QUERY_COST = '0.1';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -141,7 +67,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
   const { address, isConnected } = useAccount();
   const { openTxToast } = useNotification();
 
-  // ✅ Fetch Echo data (creator address) from EchoNFT contract
+  // ✅ Fetch Echo data from EchoNFT contract
   const { data: echoData, isError: echoDataError, isLoading: echoDataLoading } = useContractRead({
     address: ECHO_NFT_ADDRESS as `0x${string}`,
     abi: ECHO_NFT_ABI,
@@ -150,11 +76,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
     enabled: !!tokenId,
   });
 
-  // ✅ Extract creator address and knowledgeHash from the struct
-  // echoData returns a tuple: [knowledgeHash: string, creator: address]
-  // ✅ Best approach - clear array destructuring
-  const [knowledgeHash, creatorAddress] = (echoData as [string, string]) || [undefined, undefined];
-  console.log('🔍 Echo data:', { knowledgeHash, creatorAddress });
+  // ✅ Extract Echo data from the struct
+  // echoData returns a tuple: [name: string, description: string, creator: address, pricePerQuery: uint256, isActive: bool]
+  const [echoName, echoDescription, creatorAddress, pricePerQuery, isActive] = (echoData as [string, string, string, bigint, boolean]) || [undefined, undefined, undefined, undefined, undefined];
+  console.log('🔍 Echo data:', { echoName, echoDescription, creatorAddress, pricePerQuery, isActive });
 
   // ✅ Read PYUSD balance
   const { data: pyusdBalance, refetch: refetchBalance } = useContractRead({
@@ -179,7 +104,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
   console.log('🧠 ChatInterface mounted.');
   console.log('🎫 Token ID:', tokenId.toString());
   console.log('👤 Creator Address:', creatorAddress);
-  console.log('📚 Knowledge Hash:', knowledgeHash);
   console.log('💼 Connected wallet:', address);
   console.log('🔗 QueryPayments contract:', QUERY_PAYMENTS_CONTRACT_ADDRESS);
   console.log('💰 PYUSD contract:', PYUSD_ADDRESS);
@@ -225,7 +149,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
         try {
           console.log('💸 Step 2: Initiating processQueryPayment...');
           console.log('💸 Paying creator:', creatorAddress);
-          const amount = parseUnits(QUERY_COST, PYUSD_DECIMALS);
+          const queryCost = pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1; // Convert from wei to PYUSD
+          const amount = parseUnits(queryCost.toString(), PYUSD_DECIMALS);
           
           const paymentTx = await processPayment({
             args: [creatorAddress as `0x${string}`, amount, tokenId], // ✅ Using dynamic creator address
@@ -255,15 +180,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
 
         try {
           console.log('📡 Sending question to backend:', currentQuestion);
-          console.log('📚 Using knowledge hash:', knowledgeHash);
+          console.log('💰 Payment transaction hash:', paymentTxHash);
+          console.log('👤 User address:', address);
           
-          const response = await fetch('http://localhost:8000/query', {
+          const response = await fetch('http://localhost:8002/query', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-              question: currentQuestion,
-              tokenId: tokenId.toString(), // ✅ Send tokenId to backend
-              knowledgeHash: knowledgeHash, // ✅ Send knowledge hash to backend
+              query: currentQuestion, // ✅ Updated field name to match backend
+              token_id: tokenId.toString(), // ✅ Updated field name to match backend
+              payment_tx_hash: paymentTxHash, // ✅ Send payment transaction hash
+              user_address: address, // ✅ Send user address
             }),
           });
 
@@ -291,7 +218,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
     };
 
     callAIBackend();
-  }, [isPaymentSuccess, paymentStep, currentQuestion, knowledgeHash, tokenId]);
+  }, [isPaymentSuccess, paymentStep, currentQuestion, tokenId]);
 
   const resetPaymentFlow = () => {
     setIsLoading(false);
@@ -341,10 +268,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
     }
 
     // ✅ Check balance with correct decimals
-    const requiredAmount = parseUnits(QUERY_COST, PYUSD_DECIMALS);
+    const queryCost = pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1; // Convert from wei to PYUSD
+    const requiredAmount = parseUnits(queryCost.toString(), PYUSD_DECIMALS);
     if (pyusdBalance && (pyusdBalance as bigint) < requiredAmount) {
       const balance = formatUnits(pyusdBalance as bigint, PYUSD_DECIMALS);
-      alert(`Insufficient PYUSD balance. You have ${balance} PYUSD but need ${QUERY_COST} PYUSD`);
+      alert(`Insufficient PYUSD balance. You have ${balance} PYUSD but need ${queryCost} PYUSD`);
       return;
     }
 
@@ -358,7 +286,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
       console.log('🔐 Step 1: Approving PYUSD spend...');
       setPaymentStep('approving');
       
-      const amount = parseUnits(QUERY_COST, PYUSD_DECIMALS);
+      const amount = parseUnits(queryCost.toString(), PYUSD_DECIMALS);
       console.log('💰 Approving amount:', amount.toString(), 'raw units');
       
       const approveTx = await approvePYUSD({
@@ -433,11 +361,22 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
             🎫 Token ID: <span className="font-mono">{tokenId.toString()}</span>
           </div>
           <div className="text-purple-700">
-            👤 Creator: <span className="font-mono text-xs">{creatorAddress.slice(0, 6)}...{creatorAddress.slice(-4)}</span>
+            📝 Name: <span className="font-semibold">{echoName || 'Loading...'}</span>
+          </div>
+          <div className="text-purple-700">
+            👤 Creator: <span className="font-mono text-xs">{creatorAddress ? `${creatorAddress.slice(0, 6)}...${creatorAddress.slice(-4)}` : 'Loading...'}</span>
+          </div>
+          <div className="text-purple-700">
+            💰 Price: <span className="font-semibold">{pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)} PYUSD` : 'Loading...'}</span>
           </div>
           <div className="text-purple-600 text-xs">
-            📚 Knowledge: {knowledgeHash ? `${knowledgeHash.slice(0, 10)}...` : 'N/A'}
+            📚 Description: {echoDescription ? `${echoDescription.slice(0, 50)}...` : 'Loading...'}
           </div>
+          {isActive === false && (
+            <div className="text-red-600 text-xs font-semibold">
+              ⚠️ This Echo is currently inactive
+            </div>
+          )}
         </div>
       </div>
 
@@ -462,7 +401,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
       <div className="bg-gray-50 rounded-lg p-4 h-96 overflow-y-auto mb-4 space-y-4">
         {messages.length === 0 && !isLoading && (
           <div className="text-gray-400 text-center py-8">
-            Start a conversation by asking a question... (Each query costs {QUERY_COST} PYUSD)
+            Start a conversation by asking a question... (Each query costs {pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)}` : '0.1'} PYUSD)
           </div>
         )}
 
@@ -517,7 +456,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
           disabled={isLoading || !input.trim() || !address}
           className="bg-blue-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200"
         >
-          {isLoading ? 'Processing...' : `Send (${QUERY_COST} PYUSD)`}
+          {isLoading ? 'Processing...' : `Send (${pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)}` : '0.1'} PYUSD)`}
         </button>
       </form>
 

@@ -2,9 +2,9 @@ import { ethers } from "hardhat";
 
 async function main() {
   console.log("Deploying EchoNFT contract...");
-
+  const pyusdToken = "0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9";
   const EchoNFT = await ethers.getContractFactory("EchoNFT");
-  const echoNFT = await EchoNFT.deploy();
+  const echoNFT = await EchoNFT.deploy(pyusdToken);
 
   await echoNFT.waitForDeployment();
 

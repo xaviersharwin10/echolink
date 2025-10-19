@@ -1,91 +1,18 @@
 import React, { useState } from 'react';
 import { useContractRead } from 'wagmi';
 import { ChatInterface } from './ChatInterface';
-import { ECHOLNK_NFT_ADDRESS } from '../config/contracts';
+import { ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI } from '../config/contracts';
 
 const ECHO_NFT_ADDRESS = ECHOLNK_NFT_ADDRESS;
-
-// Simplified ABI for reading data
-export const ECHO_NFT_ABI = [
-    // --- ERC721 Standard Functions ---
-    {
-      "inputs": [{ "internalType": "uint256", "name": "tokenId", "type": "uint256" }],
-      "name": "ownerOf",
-      "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }],
-      "name": "balanceOf",
-      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-      "stateMutability": "view",
-      "type": "function"
-    },
-  
-    // --- Custom EchoNFT Functions ---
-    {
-      "inputs": [
-        { "internalType": "address", "name": "creator", "type": "address" },
-        { "internalType": "string", "name": "knowledgeHash", "type": "string" }
-      ],
-      "name": "safeMint",
-      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-  
-    // ✅ Replaced problematic echoData mapping getter with explicit getter function
-    {
-      "inputs": [{ "internalType": "uint256", "name": "tokenId", "type": "uint256" }],
-      "name": "getEchoData",
-      "outputs": [
-        { "internalType": "string", "name": "knowledgeHash", "type": "string" },
-        { "internalType": "address", "name": "creator", "type": "address" }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-  
-    // --- Metadata ---
-    {
-      "inputs": [],
-      "name": "name",
-      "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "symbol",
-      "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
-      "stateMutability": "view",
-      "type": "function"
-    },
-  
-    // --- Ownership ---
-    {
-      "inputs": [],
-      "name": "owner",
-      "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [{ "internalType": "address", "name": "newOwner", "type": "address" }],
-      "name": "transferOwnership",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    }
-  ];
-  
   
 
 interface EchoInfo {
   tokenId: number;
   creator: string;
-  knowledgeHash: string;
+  name: string;
+  description: string;
+  pricePerQuery: bigint;
+  isActive: boolean;
   owner: string;
 }
 
@@ -129,9 +56,9 @@ export const EchoSelector: React.FC = () => {
       if (!echoData || echoError) return null;
 
       const owner = ownerData as string;
-      const [knowledgeHash, creator] = echoData as [string, string];
-      console.log('🔍 Echo data:', { creator, knowledgeHash });
-      return { tokenId, creator, knowledgeHash, owner };
+      const [name, description, creator, pricePerQuery, isActive] = echoData as [string, string, `0x${string}`, bigint, boolean];
+      console.log('🔍 Echo data:', { creator, name, description, pricePerQuery, isActive });
+      return { tokenId, creator, name, description, pricePerQuery, isActive, owner };
     } catch (err) {
       console.error(`❌ Error checking token ${tokenId}:`, err);
       return null;
@@ -271,17 +198,25 @@ export const EchoSelector: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <h4 className="font-bold text-lg text-blue-900">
-                      Echo #{echo.tokenId}
+                      {echo.name || `Echo #${echo.tokenId}`}
                     </h4>
                     <p className="text-sm text-gray-600 mt-1">
-                      👤 Owner: {echo.owner.slice(0, 6)}...{echo.owner.slice(-4)}
+                      {echo.description || 'No description available'}
                     </p>
+                    <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                      <span>👤 Owner: {echo.owner.slice(0, 6)}...{echo.owner.slice(-4)}</span>
+                      <span>💰 Price: {(Number(echo.pricePerQuery) / 1000000).toFixed(2)} PYUSD</span>
+                      <span className={echo.isActive ? 'text-green-600' : 'text-red-600'}>
+                        {echo.isActive ? '✅ Active' : '❌ Inactive'}
+                      </span>
+                    </div>
                   </div>
                   <button
                     onClick={() => setSelectedTokenId(BigInt(echo.tokenId))}
-                    className="bg-blue-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors ml-4 shadow-md hover:shadow-lg"
+                    disabled={!echo.isActive}
+                    className="bg-blue-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors ml-4 shadow-md hover:shadow-lg"
                   >
-                    Chat →
+                    {echo.isActive ? 'Chat →' : 'Inactive'}
                   </button>
                 </div>
               </div>

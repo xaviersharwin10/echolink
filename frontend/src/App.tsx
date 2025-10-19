@@ -4,14 +4,13 @@ import { RainbowKitProvider, ConnectButton } from "@rainbow-me/rainbowkit";
 import "@rainbow-me/rainbowkit/styles.css";
 import "./App.css";
 import { wagmiConfig, chains } from "./config/wagmi";
-import { MintEcho } from "./components/MintEcho";
 import { TransactionPopupProvider, NotificationProvider } from "@blockscout/app-sdk";
+import { CreatorStudio } from "./components/CreatorStudio";
 import { EchoGallery } from "./components/EchoGallery";
-import { DiscoveryPage } from "./components/DiscoveryPage";
+import { CreditManager } from "./components/CreditManager";
 
 function App() {
-  //const [activeTab, setActiveTab] = useState<'mint' | 'chat'>('mint');
-  const [activeTab, setActiveTab] = useState<'mint' | 'gallery' | 'analyst'>('gallery');
+  const [activeTab, setActiveTab] = useState<'mint' | 'gallery' | 'credits'>('mint');
 
   return (
     <WagmiConfig config={wagmiConfig}>
@@ -58,22 +57,24 @@ function App() {
                 >
                   💬 Chat with Echos
                 </button>
-                  <button
-                  onClick={() => setActiveTab('analyst')}
+                <button
+                  onClick={() => setActiveTab('credits')}
                   className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
-                    activeTab === 'analyst' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'
+                    activeTab === 'credits'
+                      ? 'border-b-2 border-blue-600 text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  🔬 AI Analyst
+                  💳 Credits
                 </button>
               </nav>
             </div>
 
             {/* Tab Content */}
             <div className="bg-white rounded-lg shadow-lg p-6">
-              {activeTab === 'mint' && <MintEcho />}
+              {activeTab === 'mint' && <CreatorStudio />}
               {activeTab === 'gallery' && <EchoGallery />}
-              {activeTab === 'analyst' && <DiscoveryPage />}
+              {activeTab === 'credits' && <CreditManager />}
             </div>
 
             {/* Info Section */}
@@ -81,9 +82,11 @@ function App() {
               <h3 className="font-semibold text-blue-900 mb-2">ℹ️ Quick Start Guide</h3>
               <ul className="space-y-2 text-blue-800 text-sm">
                 <li>✅ <strong>Step 1:</strong> Connect your wallet using the button in the top-right</li>
-                <li>🎨 <strong>Step 2:</strong> Go to "Mint Echo" tab to create your knowledge NFT</li>
-                <li>💬 <strong>Step 3:</strong> Use "Chat with Echos" tab to browse and chat with available Echos</li>
-                <li>💰 <strong>Note:</strong> Each query costs 0.1 PYUSD and goes to the Echo's creator</li>
+                <li>🎨 <strong>Step 2:</strong> Go to "Mint Echo" tab to upload your knowledge and create an Echo NFT</li>
+                <li>💳 <strong>Step 3:</strong> Use "Credits" tab to purchase credits for seamless query payments</li>
+                <li>💬 <strong>Step 4:</strong> Use "Chat with Echos" tab to browse and chat with available Echos</li>
+                <li>💰 <strong>Payment Options:</strong> Pay per query with PYUSD or use credits for convenience</li>
+                <li>📁 <strong>Supported Files:</strong> TXT, PDF, DOCX, MP4, MOV, MP3, WAV</li>
               </ul>
             </div>
           </main>

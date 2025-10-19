@@ -1,84 +1,26 @@
 import React, { useState } from 'react';
 import { useAccount, useContractWrite, useWaitForTransaction } from 'wagmi';
-import { ECHOLNK_NFT_ADDRESS } from '../config/contracts';
+import { ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI } from '../config/contracts';
 
-export const MintEcho: React.FC = () => {
-  const [knowledgeHash, setKnowledgeHash] = useState('');
+interface MintEchoProps {
+  tokenId?: string;
+  echoName?: string;
+  echoDescription?: string;
+  pricePerQuery?: string;
+  onMintComplete?: () => void;
+}
+
+export const MintEcho: React.FC<MintEchoProps> = ({ 
+  tokenId: propTokenId,
+  echoName: propEchoName, 
+  echoDescription: propEchoDescription, 
+  pricePerQuery: propPricePerQuery, 
+  onMintComplete 
+}) => {
+  const [echoName, setEchoName] = useState(propEchoName || '');
+  const [echoDescription, setEchoDescription] = useState(propEchoDescription || '');
+  const [pricePerQuery, setPricePerQuery] = useState(propPricePerQuery || '0.1');
   const { address } = useAccount();
-
-  const ECHO_NFT_ABI = [
-    // --- ERC721 Standard Functions ---
-    {
-      "inputs": [{ "internalType": "uint256", "name": "tokenId", "type": "uint256" }],
-      "name": "ownerOf",
-      "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [{ "internalType": "address", "name": "owner", "type": "address" }],
-      "name": "balanceOf",
-      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-      "stateMutability": "view",
-      "type": "function"
-    },
-  
-    // --- Custom EchoNFT Functions ---
-    {
-      "inputs": [
-        { "internalType": "address", "name": "creator", "type": "address" },
-        { "internalType": "string", "name": "knowledgeHash", "type": "string" }
-      ],
-      "name": "safeMint",
-      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-  
-    // ✅ Replaced problematic echoData mapping getter with explicit getter function
-    {
-      "inputs": [{ "internalType": "uint256", "name": "tokenId", "type": "uint256" }],
-      "name": "getEchoData",
-      "outputs": [
-        { "internalType": "string", "name": "knowledgeHash", "type": "string" },
-        { "internalType": "address", "name": "creator", "type": "address" }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-  
-    // --- Metadata ---
-    {
-      "inputs": [],
-      "name": "name",
-      "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "symbol",
-      "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
-      "stateMutability": "view",
-      "type": "function"
-    },
-  
-    // --- Ownership ---
-    {
-      "inputs": [],
-      "name": "owner",
-      "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [{ "internalType": "address", "name": "newOwner", "type": "address" }],
-      "name": "transferOwnership",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    }
-  ];
 
   const { data, write, isLoading: isWriteLoading } = useContractWrite({
     address: ECHOLNK_NFT_ADDRESS,
@@ -90,49 +32,95 @@ export const MintEcho: React.FC = () => {
     hash: data?.hash,
   });
 
+  // Handle mint completion
+  React.useEffect(() => {
+    if (isSuccess && onMintComplete) {
+      onMintComplete();
+    }
+  }, [isSuccess, onMintComplete]);
+
   const handleMint = () => {
-    if (!address || !knowledgeHash) return;
+    if (!address || !echoName.trim() || !echoDescription.trim()) return;
+    
+    // Use provided token ID or generate a default one
+    const tokenIdToUse = BigInt(propTokenId || Date.now().toString());
+    
+    // Convert price to wei (assuming 6 decimals for PYUSD)
+    const priceInWei = BigInt(Math.floor(parseFloat(pricePerQuery) * 1000000));
     
     write({
-      args: [address, knowledgeHash],
+      args: [tokenIdToUse, address, echoName, echoDescription, priceInWei],
     });
   };
 
   return (
     <div className="mint-echo-container">
-      <h2 className="text-2xl font-bold mb-4">Mint Your Echo NFT</h2>
+      {!propEchoName && <h2 className="text-2xl font-bold mb-4">Mint Your Echo NFT</h2>}
       
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Knowledge Hash
-          </label>
-          <input
-            type="text"
-            value={knowledgeHash}
-            onChange={(e) => setKnowledgeHash(e.target.value)}
-            placeholder="Enter knowledge hash or identifier"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            disabled={!address}
-          />
-          <p className="text-sm text-gray-500 mt-1">
-            This can be any text representing your knowledge content
-          </p>
-        </div>
+        {!propEchoName && (
+          <>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Echo Name *
+              </label>
+              <input
+                type="text"
+                value={echoName}
+                onChange={(e) => setEchoName(e.target.value)}
+                placeholder="Enter a name for your Echo"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!address}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Description *
+              </label>
+              <textarea
+                value={echoDescription}
+                onChange={(e) => setEchoDescription(e.target.value)}
+                placeholder="Describe what knowledge this Echo contains"
+                rows={4}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!address}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Price per Query (PYUSD)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={pricePerQuery}
+                onChange={(e) => setPricePerQuery(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!address}
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                Users will pay this amount in PYUSD for each query
+              </p>
+            </div>
+          </>
+        )}
 
         <button
           onClick={handleMint}
-          disabled={!address || !knowledgeHash || isWriteLoading || isTransactionLoading}
+          disabled={!address || !echoName.trim() || !echoDescription.trim() || isWriteLoading || isTransactionLoading}
           className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold 
                      hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed
                      transition-colors duration-200"
         >
-          {isWriteLoading || isTransactionLoading ? 'Minting...' : 'Mint Echo'}
+          {isWriteLoading || isTransactionLoading ? 'Minting...' : 'Mint Echo NFT'}
         </button>
 
         {isSuccess && (
           <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-            ✅ Echo NFT minted successfully!
+            ✅ Echo NFT minted successfully! {propEchoName && 'Your knowledge is now live on the blockchain!'}
           </div>
         )}
 

@@ -545,9 +545,37 @@ async def handle_rest_query(ctx: Context, req: QueryRequest) -> QueryResponse:
                 processing_time_ms=None
             )
     elif req.use_credits:
-        ctx.logger.info("💳 Using credit-based payment - skipping direct payment validation")
-        # TODO: Add credit validation logic here
-        # For now, we'll proceed without validation
+        ctx.logger.info("💳 Using credit-based payment - validating credit transaction")
+        try:
+            # Validate credit transaction instead of direct payment
+            is_valid, message = await payment_validator.validate_credit_transaction(
+                req.payment_tx_hash, 
+                req.user_address,
+                logger_ctx=ctx.logger
+            )
+            
+            if not is_valid:
+                ctx.logger.error(f"❌ Credit validation failed: {message}")
+                return QueryResponse(
+                    success=False,
+                    answer="",
+                    token_id=req.token_id,
+                    timestamp=int(time.time()),
+                    error=f"Credit validation failed: {message}",
+                    processing_time_ms=None
+                )
+            
+            ctx.logger.info(f"✅ Credit validation successful: {message}")
+        except Exception as e:
+            ctx.logger.error(f"❌ Credit validation error: {str(e)}")
+            return QueryResponse(
+                success=False,
+                answer="",
+                token_id=req.token_id,
+                timestamp=int(time.time()),
+                error=f"Credit validation error: {str(e)}",
+                processing_time_ms=None
+            )
     else:
         ctx.logger.warning("⚠️  Payment validation disabled - proceeding without validation")
     

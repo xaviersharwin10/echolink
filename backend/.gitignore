@@ -26,6 +26,9 @@ temp
 
 uploads
 
+
+*_pid.txt
+
 # Ignore all fact_index files with .faiss extension
 fact_index*.faiss
 

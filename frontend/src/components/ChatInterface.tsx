@@ -207,15 +207,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
           console.log('💰 Payment transaction hash:', paymentTxHash);
           console.log('👤 User address:', address);
           
-          const response = await fetch('http://localhost:8002/query', {
+          const response = await fetch('http://localhost:3001/query', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-              query: currentQuestion, // ✅ Updated field name to match backend
-              token_id: tokenId.toString(), // ✅ Updated field name to match backend
-              payment_tx_hash: paymentTxHash, // ✅ Send payment transaction hash
-              user_address: address, // ✅ Send user address
-              use_credits: false, // ✅ Using microtransaction
+              query: currentQuestion,
+              token_id: tokenId.toString(),
+              payment_tx_hash: paymentTxHash,
+              user_address: address,
+              use_credits: false,
             }),
           });
 
@@ -259,15 +259,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
           console.log('💳 Credit transaction hash:', creditTxHash);
           console.log('👤 User address:', address);
           
-          const response = await fetch('http://localhost:8002/query', {
+          const response = await fetch('http://localhost:3001/query', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
               query: currentQuestion,
               token_id: tokenId.toString(),
-              payment_tx_hash: creditTxHash, // Send credit transaction hash
+              payment_tx_hash: creditTxHash,
               user_address: address,
-              use_credits: true, // ✅ Using credits
+              use_credits: true,
             }),
           });
 

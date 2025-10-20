@@ -5,13 +5,14 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, ToolMessage } from "@langchain/core/messages";
+import axios from 'axios';
 
 dotenv.config();
 
 // --- CONFIGURATION ---
 const app = express();
 const PORT = 3001;
-const MCP_API_BASE_URL = 'http://127.0.0.1:8000/v1'; 
+const MCP_API_BASE_URL = 'http://127.0.0.1:8003/v1'; 
 
 // --- LLM SETUP ---
 // if (!process.env.OPENROUTER_API_KEY) {
@@ -105,7 +106,63 @@ async function callMcpTool(toolName, params) {
     }
 }
 
-// --- API ENDPOINT ---
+// --- MULTI-AGENT SYSTEM INTEGRATION ---
+app.post('/query', async (req, res) => {
+  const { query, token_id, payment_tx_hash, user_address, use_credits } = req.body;
+  
+  if (!query || !payment_tx_hash || !user_address) {
+    return res.status(400).json({ 
+      error: 'Missing required fields: query, payment_tx_hash, user_address' 
+    });
+  }
+
+  console.log(`🎭 Multi-Agent Query: "${query}" for user: ${user_address}`);
+  console.log(`💳 Payment TX: ${payment_tx_hash} (${use_credits ? 'Credits' : 'Direct'})`);
+
+  try {
+    // Call the Orchestrator Agent directly and wait for the complete response
+    console.log('🎭 Calling orchestrator agent directly...');
+    const orchestratorResponse = await axios.post('http://localhost:8004/query', {
+      query,
+      token_id,
+      payment_tx_hash,
+      user_address,
+      use_credits: use_credits || false
+    });
+
+    console.log('✅ Orchestrator response:', orchestratorResponse.data);
+    
+    // The orchestrator should now return the complete result directly
+    if (orchestratorResponse.data.success) {
+      return res.json(orchestratorResponse.data);
+    } else {
+      return res.status(500).json({
+        success: false,
+        error: orchestratorResponse.data.error || 'Query processing failed',
+        answer: ''
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Multi-agent query failed:', error);
+    
+    if (error.response) {
+      return res.status(error.response.status).json({
+        success: false,
+        error: error.response.data.error || 'Multi-agent system error',
+        answer: ''
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to connect to multi-agent system',
+        answer: ''
+      });
+    }
+  }
+});
+
+// --- LEGACY AI ANALYST ENDPOINT ---
 app.post('/ask', async (req, res) => {
   const { question, connectedAddress } = req.body;
   if (!question) return res.status(400).json({ error: 'Question is required' });

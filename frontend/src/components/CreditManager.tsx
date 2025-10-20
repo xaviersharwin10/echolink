@@ -39,6 +39,7 @@ const PYUSD_ABI = [
 export const CreditManager: React.FC = () => {
   const [purchaseAmount, setPurchaseAmount] = useState('1.0');
   const [isPurchasing, setIsPurchasing] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
   const { address, isConnected } = useAccount();
 
   // Read PYUSD balance
@@ -72,10 +73,14 @@ export const CreditManager: React.FC = () => {
   });
 
   // Approve PYUSD
-  const { writeAsync: approvePYUSD } = useContractWrite({
+  const { writeAsync: approvePYUSD, data: approveTxData } = useContractWrite({
     address: PYUSD_ADDRESS as `0x${string}`,
     abi: PYUSD_ABI,
     functionName: 'approve',
+  });
+
+  const { isLoading: isApprovePending, isSuccess: isApproveSuccess } = useWaitForTransaction({
+    hash: approveTxData?.hash,
   });
 
   // Purchase credits
@@ -95,26 +100,71 @@ export const CreditManager: React.FC = () => {
     const amount = parseUnits(purchaseAmount, PYUSD_DECIMALS);
     const requiredAllowance = amount;
 
+    // Check PYUSD balance first
+    if (!pyusdBalance || (pyusdBalance as bigint) < amount) {
+      const balance = formatUnits(pyusdBalance as bigint || BigInt(0), PYUSD_DECIMALS);
+      const required = formatUnits(amount, PYUSD_DECIMALS);
+      alert(`Insufficient PYUSD balance. You have ${balance} PYUSD but need ${required} PYUSD`);
+      return;
+    }
+
     // Check if we need to approve first
     if (!currentAllowance || (currentAllowance as bigint) < requiredAllowance) {
       try {
         console.log('🔐 Approving PYUSD for credit purchase...');
+        console.log('💰 Required allowance:', requiredAllowance.toString());
+        console.log('💰 Current allowance:', currentAllowance?.toString() || '0');
+        
+        setIsApproving(true);
+        
         const approveTx = await approvePYUSD({
           args: [ECHOLNK_NFT_ADDRESS, requiredAllowance],
         });
         console.log('✅ Approval transaction sent:', approveTx.hash);
         
-        // Wait for approval (in a real app, you'd want to wait for confirmation)
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        await refetchAllowance();
+        // Wait for approval confirmation
+        console.log('⏳ Waiting for approval confirmation...');
+        
+        // Wait for the approval transaction to be confirmed
+        let approvalConfirmed = false;
+        let attempts = 0;
+        const maxAttempts = 30; // 30 seconds max wait
+        
+        while (!approvalConfirmed && attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+          attempts++;
+          
+          // Check if approval was successful
+          if (isApproveSuccess) {
+            approvalConfirmed = true;
+            console.log('✅ Approval transaction confirmed');
+            break;
+          }
+          
+          // Refetch allowance to check if it was updated
+          await refetchAllowance();
+        }
+        
+        setIsApproving(false);
+        
+        if (!approvalConfirmed) {
+          console.error('❌ Approval confirmation timeout');
+          alert('Approval is taking too long. Please check your wallet and try again.');
+          return;
+        }
+        
+        console.log('✅ Approval confirmed, proceeding with purchase');
       } catch (error) {
         console.error('❌ Approval failed:', error);
+        setIsApproving(false);
+        alert('Approval failed. Please check your wallet and try again.');
         return;
       }
     }
 
     try {
       console.log('💳 Purchasing credits...');
+      console.log('💰 Amount:', amount.toString());
       setIsPurchasing(true);
       
       const purchaseTx = await purchaseCredits({
@@ -125,6 +175,19 @@ export const CreditManager: React.FC = () => {
     } catch (error) {
       console.error('❌ Credit purchase failed:', error);
       setIsPurchasing(false);
+      
+      // Provide more detailed error information
+      if (error instanceof Error) {
+        if (error.message.includes('insufficient')) {
+          alert('Insufficient PYUSD balance. Please check your balance and try again.');
+        } else if (error.message.includes('allowance')) {
+          alert('Insufficient allowance. Please approve more PYUSD and try again.');
+        } else {
+          alert(`Credit purchase failed: ${error.message}`);
+        }
+      } else {
+        alert('Credit purchase failed. Please check your wallet and try again.');
+      }
     }
   };
 
@@ -220,12 +283,14 @@ export const CreditManager: React.FC = () => {
 
           <button
             onClick={handlePurchaseCredits}
-            disabled={!purchaseAmount || isPurchasing || isPurchasePending}
+            disabled={!purchaseAmount || isPurchasing || isPurchasePending || isApproving}
             className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold 
                        hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed
                        transition-colors duration-200"
           >
-            {isPurchasing || isPurchasePending ? 'Processing...' : `Purchase ${purchaseAmount} PYUSD Credits`}
+            {isApproving ? 'Approving...' : 
+             isPurchasing || isPurchasePending ? 'Processing...' : 
+             `Purchase ${purchaseAmount} PYUSD Credits`}
           </button>
 
           {isPurchaseSuccess && (

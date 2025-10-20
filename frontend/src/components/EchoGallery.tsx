@@ -54,6 +54,14 @@ export const EchoGallery: React.FC = () => {
           const isActive = activeStatuses[i];
 
           try {
+            // Get the actual owner of the NFT
+            const owner = await readContract({
+              address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
+              abi: ECHO_NFT_ABI,
+              functionName: 'ownerOf',
+              args: [BigInt(tokenId)],
+            });
+
             // Fetch the creator's activity from Blockscout
             const activityRes = await fetch(`${API_BASE_URL}/addresses/${creator}/token-transfers?token=${PYUSD_TOKEN_ADDRESS}`);
             const activityData = await activityRes.json();
@@ -70,15 +78,15 @@ export const EchoGallery: React.FC = () => {
             
             foundEchos.push({
               tokenId: tokenId,
-              owner: creator, // Using creator as owner since we don't have ownerOf in the ABI
+              owner: owner as string, // Now using actual owner from ownerOf
               creator: creator,
               isCreatorActive: isCreatorActive,
               ...hardcoded
             });
 
           } catch (error) {
-            console.log(`Failed to fetch activity data for creator ${creator}. Skipping.`);
-            // Still add the Echo even if activity data fails
+            console.log(`Failed to fetch data for token ${tokenId}. Skipping.`);
+            // Still add the Echo even if some data fails
             const hardcoded = hardcodedData[tokenId] || {
               name: name || `Echo #${tokenId}`,
               description: description || "An AI entity containing a unique body of knowledge, ready for you to explore.",
@@ -87,7 +95,7 @@ export const EchoGallery: React.FC = () => {
             
             foundEchos.push({
               tokenId: tokenId,
-              owner: creator,
+              owner: creator, // Fallback to creator if ownerOf fails
               creator: creator,
               isCreatorActive: false, // Default to false if we can't fetch activity
               ...hardcoded

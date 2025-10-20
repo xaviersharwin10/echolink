@@ -48,7 +48,8 @@ interface Message {
   content: string;
 }
 
-type PaymentStep = 'idle' | 'approving' | 'approved' | 'paying' | 'paid';
+type PaymentStep = 'idle' | 'approving' | 'approved' | 'paying' | 'paid' | 'using_credits' | 'credits_used';
+type PaymentMethod = 'microtransaction' | 'credits';
 
 interface ChatInterfaceProps {
   tokenId: bigint; // ✅ Accept tokenId as prop
@@ -59,10 +60,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('credits');
   
   const [paymentStep, setPaymentStep] = useState<PaymentStep>('idle');
   const [approveTxHash, setApproveTxHash] = useState<`0x${string}` | undefined>();
   const [paymentTxHash, setPaymentTxHash] = useState<`0x${string}` | undefined>();
+  const [creditTxHash, setCreditTxHash] = useState<`0x${string}` | undefined>();
 
   const { address, isConnected } = useAccount();
   const { openTxToast } = useNotification();
@@ -101,6 +104,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
     enabled: !!address,
   });
 
+  // ✅ Read user credits
+  const { data: userCredits, refetch: refetchCredits } = useContractRead({
+    address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
+    abi: ECHO_NFT_ABI,
+    functionName: 'getUserCredits',
+    args: address ? [address] : undefined,
+    watch: true,
+    enabled: !!address,
+  });
+
   console.log('🧠 ChatInterface mounted.');
   console.log('🎫 Token ID:', tokenId.toString());
   console.log('👤 Creator Address:', creatorAddress);
@@ -129,12 +142,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
     functionName: 'processQueryPayment',
   });
 
+  // STEP 2B: Use credits for query
+  const { writeAsync: executeCreditsForQuery } = useContractWrite({
+    address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
+    abi: ECHO_NFT_ABI,
+    functionName: 'useCreditsForQuery',
+  });
+
   const { isLoading: isApprovePending, isSuccess: isApproveSuccess } = useWaitForTransaction({
     hash: approveTxHash,
   });
 
   const { isLoading: isPaymentPending, isSuccess: isPaymentSuccess } = useWaitForTransaction({
     hash: paymentTxHash,
+  });
+
+  const { isLoading: isCreditPending, isSuccess: isCreditSuccess } = useWaitForTransaction({
+    hash: creditTxHash,
   });
 
   // Handle approval success
@@ -191,6 +215,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
               token_id: tokenId.toString(), // ✅ Updated field name to match backend
               payment_tx_hash: paymentTxHash, // ✅ Send payment transaction hash
               user_address: address, // ✅ Send user address
+              use_credits: false, // ✅ Using microtransaction
             }),
           });
 
@@ -220,11 +245,64 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
     callAIBackend();
   }, [isPaymentSuccess, paymentStep, currentQuestion, tokenId]);
 
+  // Handle credit success
+  useEffect(() => {
+    const callAIBackendWithCredits = async () => {
+      if (isCreditSuccess && paymentStep === 'using_credits') {
+        console.log('🎉 Credits used successfully');
+        setPaymentStep('credits_used');
+
+        await refetchCredits();
+
+        try {
+          console.log('📡 Sending question to backend with credits:', currentQuestion);
+          console.log('💳 Credit transaction hash:', creditTxHash);
+          console.log('👤 User address:', address);
+          
+          const response = await fetch('http://localhost:8002/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              query: currentQuestion,
+              token_id: tokenId.toString(),
+              payment_tx_hash: creditTxHash, // Send credit transaction hash
+              user_address: address,
+              use_credits: true, // ✅ Using credits
+            }),
+          });
+
+          console.log('✅ Backend responded:', response.status);
+          const data = await response.json();
+          console.log('📦 AI response data:', data);
+
+          setMessages(prev => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: data.answer || 'Sorry, I could not process your request.',
+            },
+          ]);
+        } catch (error) {
+          console.error('❌ Error querying backend:', error);
+          setMessages(prev => [
+            ...prev,
+            { role: 'assistant', content: 'Error: Could not connect to the backend.' },
+          ]);
+        } finally {
+          resetPaymentFlow();
+        }
+      }
+    };
+
+    callAIBackendWithCredits();
+  }, [isCreditSuccess, paymentStep, currentQuestion, tokenId]);
+
   const resetPaymentFlow = () => {
     setIsLoading(false);
     setPaymentStep('idle');
     setApproveTxHash(undefined);
     setPaymentTxHash(undefined);
+    setCreditTxHash(undefined);
     setCurrentQuestion('');
   };
 
@@ -267,38 +345,69 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
       return;
     }
 
-    // ✅ Check balance with correct decimals
-    const queryCost = pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1; // Convert from wei to PYUSD
-    const requiredAmount = parseUnits(queryCost.toString(), PYUSD_DECIMALS);
-    if (pyusdBalance && (pyusdBalance as bigint) < requiredAmount) {
-      const balance = formatUnits(pyusdBalance as bigint, PYUSD_DECIMALS);
-      alert(`Insufficient PYUSD balance. You have ${balance} PYUSD but need ${queryCost} PYUSD`);
-      return;
-    }
-
     const userMessage: Message = { role: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
     setCurrentQuestion(input);
     setInput('');
     setIsLoading(true);
 
-    try {
-      console.log('🔐 Step 1: Approving PYUSD spend...');
-      setPaymentStep('approving');
-      
-      const amount = parseUnits(queryCost.toString(), PYUSD_DECIMALS);
-      console.log('💰 Approving amount:', amount.toString(), 'raw units');
-      
-      const approveTx = await approvePYUSD({
-        args: [QUERY_PAYMENTS_CONTRACT_ADDRESS, amount],
-      });
-      
-      console.log('✅ Approval transaction sent:', approveTx.hash);
-      openTxToast("11155111", approveTx.hash); // "11155111" is the chain ID for Sepolia
-      setApproveTxHash(approveTx.hash);
-      
-    } catch (error: any) {
-      handlePaymentError(error);
+    const queryCost = pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1; // Convert from wei to PYUSD
+    const requiredCredits = Math.ceil(queryCost * 100); // 1 PYUSD = 100 credits
+
+    // Extract credit balance
+    const creditBalance = userCredits && Array.isArray(userCredits) ? userCredits[0] as bigint : BigInt(0);
+
+    if (paymentMethod === 'credits') {
+      // Check if user has enough credits
+      if (creditBalance < BigInt(requiredCredits)) {
+        alert(`Insufficient credits. You have ${creditBalance.toString()} credits but need ${requiredCredits} credits (${queryCost} PYUSD)`);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        console.log('💳 Using credits for query...');
+        setPaymentStep('using_credits');
+        
+        const creditTx = await executeCreditsForQuery({
+          args: [address, tokenId, BigInt(requiredCredits)],
+        });
+        
+        console.log('✅ Credit transaction sent:', creditTx.hash);
+        openTxToast("11155111", creditTx.hash);
+        setCreditTxHash(creditTx.hash);
+        
+      } catch (error: any) {
+        handlePaymentError(error);
+      }
+    } else {
+      // Microtransaction flow
+      const requiredAmount = parseUnits(queryCost.toString(), PYUSD_DECIMALS);
+      if (pyusdBalance && (pyusdBalance as bigint) < requiredAmount) {
+        const balance = formatUnits(pyusdBalance as bigint, PYUSD_DECIMALS);
+        alert(`Insufficient PYUSD balance. You have ${balance} PYUSD but need ${queryCost} PYUSD`);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        console.log('🔐 Step 1: Approving PYUSD spend...');
+        setPaymentStep('approving');
+        
+        const amount = parseUnits(queryCost.toString(), PYUSD_DECIMALS);
+        console.log('💰 Approving amount:', amount.toString(), 'raw units');
+        
+        const approveTx = await approvePYUSD({
+          args: [QUERY_PAYMENTS_CONTRACT_ADDRESS, amount],
+        });
+        
+        console.log('✅ Approval transaction sent:', approveTx.hash);
+        openTxToast("11155111", approveTx.hash); // "11155111" is the chain ID for Sepolia
+        setApproveTxHash(approveTx.hash);
+        
+      } catch (error: any) {
+        handlePaymentError(error);
+      }
     }
   };
 
@@ -313,6 +422,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
       return 'Processing payment on-chain...';
     }
     if (paymentStep === 'paid') {
+      return 'Querying AI...';
+    }
+    if (paymentStep === 'using_credits' || isCreditPending) {
+      return 'Using credits for query...';
+    }
+    if (paymentStep === 'credits_used') {
       return 'Querying AI...';
     }
     return 'Processing...';
@@ -391,8 +506,50 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
             <div className="text-blue-700">
               ✅ Allowance: <span className="font-mono">{formatBalance(currentAllowance as bigint)}</span> PYUSD
             </div>
+            <div className="text-green-700">
+              💳 Credits: <span className="font-mono font-bold">{userCredits && Array.isArray(userCredits) ? userCredits[0].toString() : '0'}</span> credits
+            </div>
             <div className="text-blue-600 text-xs">
               📍 {address.slice(0, 6)}...{address.slice(-4)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ Payment Method Selector */}
+      {address && (
+        <div className="mb-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+          <div className="text-sm space-y-2">
+            <div className="font-semibold text-purple-900">Payment Method</div>
+            <div className="flex gap-4">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="credits"
+                  checked={paymentMethod === 'credits'}
+                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                  className="mr-2"
+                />
+                <span className="text-purple-700">💳 Use Credits</span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="microtransaction"
+                  checked={paymentMethod === 'microtransaction'}
+                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                  className="mr-2"
+                />
+                <span className="text-purple-700">💰 Direct Payment</span>
+              </label>
+            </div>
+            <div className="text-xs text-purple-600">
+              {paymentMethod === 'credits' 
+                ? `Using ${Math.ceil((pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1) * 100)} credits (${(pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1).toFixed(2)} PYUSD)`
+                : `Direct payment of ${(pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1).toFixed(2)} PYUSD`
+              }
             </div>
           </div>
         </div>
@@ -456,7 +613,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
           disabled={isLoading || !input.trim() || !address}
           className="bg-blue-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200"
         >
-          {isLoading ? 'Processing...' : `Send (${pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)}` : '0.1'} PYUSD)`}
+          {isLoading ? 'Processing...' : 
+            paymentMethod === 'credits' 
+              ? `Send (${Math.ceil((pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1) * 100)} credits)`
+              : `Send (${pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)}` : '0.1'} PYUSD)`
+          }
         </button>
       </form>
 
@@ -471,11 +632,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
         <div className="mt-4 p-2 bg-gray-100 rounded text-xs font-mono">
           <div>Token ID: {tokenId.toString()}</div>
           <div>Creator: {creatorAddress}</div>
+          <div>Payment Method: {paymentMethod}</div>
           <div>Payment Step: {paymentStep}</div>
           <div>Approve Pending: {isApprovePending ? 'Yes' : 'No'}</div>
           <div>Payment Pending: {isPaymentPending ? 'Yes' : 'No'}</div>
+          <div>Credit Pending: {isCreditPending ? 'Yes' : 'No'}</div>
           <div>Balance: {pyusdBalance?.toString() || 'N/A'} (raw units)</div>
           <div>Allowance: {currentAllowance?.toString() || 'N/A'} (raw units)</div>
+          <div>Credits: {userCredits && Array.isArray(userCredits) ? userCredits[0].toString() : 'N/A'}</div>
         </div>
       )}
     </div>

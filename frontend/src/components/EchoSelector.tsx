@@ -35,6 +35,15 @@ export const EchoSelector: React.FC = () => {
     watch: false,
   });
 
+  const { data: ownerData, error: ownerError } = useContractRead({
+    address: ECHO_NFT_ADDRESS as `0x${string}`,
+    abi: ECHO_NFT_ABI,
+    functionName: 'ownerOf',
+    args: checkId ? [checkId] : undefined,
+    enabled: !!checkId,
+    watch: false,
+  });
+
   // Function to check if token exists using useContractRead hooks
   const checkTokenExists = async (tokenId: number): Promise<EchoInfo | null> => {
     try {
@@ -44,10 +53,12 @@ export const EchoSelector: React.FC = () => {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       if (!echoData || echoError) return null;
+      if (!ownerData || ownerError) return null;
 
       const [name, description, creator, pricePerQuery, isActive] = echoData as [string, string, `0x${string}`, bigint, boolean];
-      console.log('🔍 Echo data:', { creator, name, description, pricePerQuery, isActive });
-      return { tokenId, creator, name, description, pricePerQuery, isActive, owner: creator };
+      const owner = ownerData as string;
+      console.log('🔍 Echo data:', { creator, owner, name, description, pricePerQuery, isActive });
+      return { tokenId, creator, name, description, pricePerQuery, isActive, owner };
     } catch (err) {
       console.error(`❌ Error checking token ${tokenId}:`, err);
       return null;

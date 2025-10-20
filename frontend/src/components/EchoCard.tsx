@@ -9,6 +9,8 @@ export interface EchoInfo {
   description: string;
   imageUrl: string;
   isCreatorActive?: boolean;
+  totalQueries: number; 
+  pricePerQuery: bigint;
 }
 
 interface EchoCardProps {
@@ -28,24 +30,52 @@ const ActiveCreatorBadge: React.FC = () => (
   </span>
 );
 
+const formatPrice = (price: bigint): string => {
+  return (Number(price) / 1e6).toFixed(2);
+};
+
+
 export const EchoCard: React.FC<EchoCardProps> = ({ echo, onSelect }) => {
-  const { tokenId, name, description, creator, imageUrl, isCreatorActive } =
-    echo;
+  const { tokenId, name, description, creator, isCreatorActive, totalQueries, pricePerQuery } = echo;
+
+  const formattedPrice = formatPrice(pricePerQuery);
 
   return (
     <div
-      className="echo-card flex flex-col rounded-2xl border border-gray-200 bg-white shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+      className="echo-card flex flex-col rounded-2xl border border-gray-200 shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
       style={{ background: generateGradient(tokenId) }}
     >
       <div className="p-5">
-        {/* <img
-          src={imageUrl}
-          alt={name}
-          className="w-full h-48 rounded-lg object-cover mb-4"
-        /> */}
         <h3 className="text-2xl font-bold text-gray-800">{name}</h3>
         <p className="text-sm text-gray-500 mb-4">ECHO #{tokenId}</p>
-        <p className="text-gray-600 text-base mb-5 h-20">{description}</p>
+
+        {/* Description */}
+        <p className="text-gray-600 text-base">{description}</p>
+      </div>
+
+      <div className="px-5 pb-4">
+        <div className="flex justify-between items-center bg-white/60 p-3 rounded-xl border border-gray-300/50 backdrop-blur-sm shadow-inner">
+          {/* Total Queries (Blockscout Verified) */}
+          <div className="text-center">
+            <p className="text-xl font-extrabold text-purple-700">
+              {totalQueries}
+            </p>
+            <p className="text-xs font-semibold uppercase text-gray-500 tracking-wider">
+              Queries
+            </p>
+          </div>
+          {/* Divider */}
+          <div className="w-px h-8 bg-gray-300/80"></div>
+          {/* Price per Query */}
+          <div className="text-center">
+            <p className="text-xl font-extrabold text-green-700">
+              ${formattedPrice}
+            </p>
+            <p className="text-xs font-semibold uppercase text-gray-500 tracking-wider">
+              Price per Query
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="mt-auto p-5 border-t border-gray-200 bg-white/50 rounded-b-2xl">

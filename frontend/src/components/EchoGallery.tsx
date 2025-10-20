@@ -34,17 +34,7 @@ export const EchoGallery: React.FC = () => {
         });
 
         const [tokenIds, names, descriptions, creators, pricesPerQuery, activeStatuses] = allEchoesData as [
-          bigint[], string[], string[], `0x${string}`[], bigint[], boolean[]
-        ];
-
-        console.log('📊 Retrieved all Echos:', {
-          count: tokenIds.length,
-          tokenIds: tokenIds.map(id => id.toString()),
-          names,
-          creators: creators.map(addr => `${addr.slice(0, 6)}...${addr.slice(-4)}`)
-        });
-
-        // Process each Echo
+bigint[], string[], string[], `0x${string}`[], bigint[], boolean[]];        // Process each Echo
         for (let i = 0; i < tokenIds.length; i++) {
           const tokenId = Number(tokenIds[i]);
           const name = names[i];
@@ -62,12 +52,13 @@ export const EchoGallery: React.FC = () => {
               args: [BigInt(tokenId)],
             });
 
-            // Fetch the creator's activity from Blockscout
             const activityRes = await fetch(`${API_BASE_URL}/addresses/${creator}/token-transfers?token=${PYUSD_TOKEN_ADDRESS}`);
             const activityData = await activityRes.json();
+
             const incomingTransfers = activityData?.items.filter((tx: any) => tx.to.hash.toLowerCase() === creator.toLowerCase());
 
-            const isCreatorActive = (incomingTransfers.length || 0) > ACTIVITY_THRESHOLD;
+            const totalQueries = incomingTransfers.length || 0;
+            const isCreatorActive = totalQueries > ACTIVITY_THRESHOLD;
             
             // Use hardcoded data if available, otherwise use contract data
             const hardcoded = hardcodedData[tokenId] || {
@@ -78,15 +69,16 @@ export const EchoGallery: React.FC = () => {
             
             foundEchos.push({
               tokenId: tokenId,
-              owner: owner as string, // Now using actual owner from ownerOf
+              owner: owner as string,
               creator: creator,
               isCreatorActive: isCreatorActive,
+              totalQueries: totalQueries,
+              pricePerQuery: pricePerQuery, 
               ...hardcoded
             });
 
           } catch (error) {
-            console.log(`Failed to fetch data for token ${tokenId}. Skipping.`);
-            // Still add the Echo even if some data fails
+            console.warn(`Failed to fetch Blockscout data for token ${tokenId}. Using fallbacks.`, error);
             const hardcoded = hardcodedData[tokenId] || {
               name: name || `Echo #${tokenId}`,
               description: description || "An AI entity containing a unique body of knowledge, ready for you to explore.",
@@ -95,9 +87,11 @@ export const EchoGallery: React.FC = () => {
             
             foundEchos.push({
               tokenId: tokenId,
-              owner: creator, // Fallback to creator if ownerOf fails
+              owner: creator, 
               creator: creator,
-              isCreatorActive: false, // Default to false if we can't fetch activity
+              isCreatorActive: false,
+              totalQueries: 0, 
+              pricePerQuery: pricePerQuery,
               ...hardcoded
             });
           }
@@ -117,10 +111,10 @@ export const EchoGallery: React.FC = () => {
 
   if (selectedTokenId) {
     return (
-      <div className="max-w-4xl mx-auto py-8">
+      <div className="max-w-5xl mx-auto py-8">
         <button
           onClick={() => setSelectedTokenId(null)}
-          className="mb-6 px-5 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+          className="mb-6 px-5 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold shadow-sm"
         >
           ← Back to Echo Gallery
         </button>
@@ -130,33 +124,34 @@ export const EchoGallery: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold mb-4">
-          Knowledge Echo Gallery
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 className="text-4xl font-extrabold text-gray-900 mb-2">
+          Knowledge Echo Marketplace
         </h1>
-        <p className="mt-4 text-md text-gray-500">
-          Discover and interact with AI-powered Knowledge Echos stored on-chain.
+        <p className="mt-2 text-lg text-gray-600">
+          Discover and interact with Blockscout-verified, AI-powered Knowledge Echos.
         </p>
 
+    {/* Loading and Empty States remain the same */}
     {isScanning && (
-      <div className="text-center py-10">
+      <div className="text-center py-12">
         <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          <p className="ml-4 text-gray-500">Scanning for Echos on the blockchain...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-3 border-purple-500"></div>
+          <p className="ml-4 text-gray-600 text-lg">Scanning for Echos on the blockchain..</p>
         </div>
       </div>
     )}
 
     {!isScanning && availableEchos.length === 0 && (
-        <div className="text-center text-gray-500 bg-gray-100 p-8 rounded-lg mt-8">
-          <h3 className="text-xl font-semibold text-gray-700">No Echos Found</h3>
-          <p className="mt-2">It looks like there are no Echos minted yet. <br /> Be the first to mint one!</p>
+        <div className="text-center text-gray-500 bg-gray-100 p-10 rounded-xl mt-10 border border-dashed border-gray-300">
+          <h3 className="text-2xl font-semibold text-gray-700">No Echos Found</h3>
+          <p className="mt-3">It looks like there are no Echos minted yet. <br /> Be the first to mint one!</p>
         </div>
       )}
 
       {availableEchos.length > 0 && (
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 py-4">
-          {availableEchos.sort((a, b) => a.tokenId - b.tokenId).map((echo) => (
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 py-8">
+          {availableEchos.sort((a, b) => b.tokenId - a.tokenId).map((echo) => (
             <EchoCard key={echo.tokenId} echo={echo} onSelect={setSelectedTokenId} />
           ))}
         </div>

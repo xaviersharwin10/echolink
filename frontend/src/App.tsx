@@ -8,24 +8,24 @@ import { TransactionPopupProvider, NotificationProvider } from "@blockscout/app-
 import { CreatorStudio } from "./components/CreatorStudio";
 import { EchoGallery } from "./components/EchoGallery";
 import { CreditManager } from "./components/CreditManager";
-import { DiscoveryPage } from "./components/DiscoveryPage";
+import { EchoLeaderboard } from "./components/EchoLeaderboard"; // NEW: Leaderboard component
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'mint' | 'gallery' | 'credits' | 'analyst'>('mint');
+  const [activeTab, setActiveTab] = useState<'mint' | 'gallery' | 'credits' | 'leaderboard'>('mint');
 
   return (
     <WagmiConfig config={wagmiConfig}>
       <RainbowKitProvider chains={chains}>
         <NotificationProvider>
         <TransactionPopupProvider>
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 font-sans">
           {/* Header */}
-          <header className="bg-white shadow-sm">
+          <header className="bg-white shadow-md sticky top-0 z-10">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
               <div className="flex justify-between items-center">
                 <div className="flex items-center">
-                  <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-                    EchoLink Protocol
+                  <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700">
+                    EchoLink
                   </h1>
                 </div>
                 <ConnectButton />
@@ -36,57 +36,42 @@ function App() {
           {/* Main Content */}
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {/* Tab Navigation */}
-            <div className="bg-white rounded-lg shadow-sm mb-6">
-              <nav className="flex border-b">
-                <button
-                  onClick={() => setActiveTab('mint')}
-                  className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
-                    activeTab === 'mint'
-                      ? 'border-b-2 border-blue-600 text-blue-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  🎨 Mint Echo
-                </button>
-                <button
-                  onClick={() => setActiveTab('gallery')}
-                  className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
-                    activeTab === 'gallery'
-                      ? 'border-b-2 border-blue-600 text-blue-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  💬 Chat with Echos
-                </button>
-                <button
-                  onClick={() => setActiveTab('credits')}
-                  className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
-                    activeTab === 'credits'
-                      ? 'border-b-2 border-blue-600 text-blue-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  💳 Credits
-                </button>
-                <button
-                  onClick={() => setActiveTab('analyst')}
-                  className={`flex-1 py-4 px-6 text-center font-semibold transition-colors ${
-                    activeTab === 'analyst'
-                      ? 'border-b-2 border-blue-600 text-blue-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  🔬 AI Analyst
-                </button>
+            <div className="bg-white rounded-xl shadow-lg mb-8">
+              <nav className="flex border-b border-gray-100">
+                
+                <TabButton 
+                  label="🎨 Mint Echo" 
+                  tab="mint" 
+                  activeTab={activeTab} 
+                  setActiveTab={setActiveTab} 
+                />
+                <TabButton 
+                  label="💬 Chat with Echos" 
+                  tab="gallery" 
+                  activeTab={activeTab} 
+                  setActiveTab={setActiveTab} 
+                />
+                <TabButton 
+                  label="💳 Credits" 
+                  tab="credits" 
+                  activeTab={activeTab} 
+                  setActiveTab={setActiveTab} 
+                />
+                <TabButton 
+                  label="🏆 Leaderboard" 
+                  tab="leaderboard" 
+                  activeTab={activeTab} 
+                  setActiveTab={setActiveTab} 
+                />
               </nav>
             </div>
 
             {/* Tab Content */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="bg-white rounded-xl shadow-2xl p-6 md:p-8">
               {activeTab === 'mint' && <CreatorStudio />}
               {activeTab === 'gallery' && <EchoGallery />}
               {activeTab === 'credits' && <CreditManager />}
-              {activeTab === 'analyst' && <DiscoveryPage />}
+              {activeTab === 'leaderboard' && <EchoLeaderboard />} 
             </div>
 
             {/* Info Section */}
@@ -105,7 +90,7 @@ function App() {
           </main>
 
           {/* Footer */}
-          <footer className="mt-12 pb-8 text-center text-gray-600">
+          <footer className="mt-12 pb-8 text-center text-gray-500">
             <p className="text-sm">
               Powered by EchoLink • Web3 Knowledge Network
             </p>
@@ -119,3 +104,25 @@ function App() {
 }
 
 export default App;
+
+
+// --- Helper Component for Tab Button Styling ---
+interface TabButtonProps {
+    label: string;
+    tab: 'mint' | 'gallery' | 'credits' | 'leaderboard';
+    activeTab: string;
+    setActiveTab: React.Dispatch<React.SetStateAction<'mint' | 'gallery' | 'credits' | 'leaderboard'>>;
+}
+
+const TabButton: React.FC<TabButtonProps> = ({ label, tab, activeTab, setActiveTab }) => (
+    <button
+        onClick={() => setActiveTab(tab)}
+        className={`flex-1 py-4 px-6 text-center font-semibold transition-all duration-200 border-b-2 
+          ${activeTab === tab
+            ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
+            : 'border-transparent text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+        }`}
+    >
+        {label}
+    </button>
+);

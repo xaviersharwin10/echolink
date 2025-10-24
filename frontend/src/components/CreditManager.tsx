@@ -157,39 +157,73 @@ export const CreditManager: React.FC = () => {
         }
         
         console.log('✅ Approval confirmed, proceeding with purchase');
+        
+        // Now proceed with the purchase transaction immediately
+        try {
+          console.log('💳 Purchasing credits...');
+          console.log('💰 Amount:', amount.toString());
+          setIsPurchasing(true);
+          
+          const purchaseTx = await purchaseCredits({
+            args: [amount],
+          });
+          console.log('✅ Purchase transaction sent:', purchaseTx.hash);
+          openTxToast("11155111", purchaseTx.hash);
+          
+        } catch (error) {
+          console.error('❌ Credit purchase failed:', error);
+          setIsPurchasing(false);
+          
+          // Provide more detailed error information
+          if (error instanceof Error) {
+            if (error.message.includes('insufficient')) {
+              alert('Insufficient PYUSD balance. Please check your balance and try again.');
+            } else if (error.message.includes('allowance')) {
+              alert('Insufficient allowance. Please approve more PYUSD and try again.');
+            } else {
+              alert(`Credit purchase failed: ${error.message}`);
+            }
+          } else {
+            alert('Credit purchase failed. Please check your wallet and try again.');
+          }
+          return;
+        }
       } catch (error) {
         console.error('❌ Approval failed:', error);
         setIsApproving(false);
         alert('Approval failed. Please check your wallet and try again.');
         return;
       }
-    }
-
-    try {
-      console.log('💳 Purchasing credits...');
-      console.log('💰 Amount:', amount.toString());
-      setIsPurchasing(true);
-      
-      const purchaseTx = await purchaseCredits({
-        args: [amount],
-      });
-      console.log('✅ Purchase transaction sent:', purchaseTx.hash);
-      openTxToast("11155111", purchaseTx.hash);
-    } catch (error) {
-      console.error('❌ Credit purchase failed:', error);
-      setIsPurchasing(false);
-      
-      // Provide more detailed error information
-      if (error instanceof Error) {
-        if (error.message.includes('insufficient')) {
-          alert('Insufficient PYUSD balance. Please check your balance and try again.');
-        } else if (error.message.includes('allowance')) {
-          alert('Insufficient allowance. Please approve more PYUSD and try again.');
+    } else {
+      // No approval needed, proceed directly with purchase
+      try {
+        console.log('💳 Purchasing credits...');
+        console.log('💰 Amount:', amount.toString());
+        setIsPurchasing(true);
+        
+        const purchaseTx = await purchaseCredits({
+          args: [amount],
+        });
+        console.log('✅ Purchase transaction sent:', purchaseTx.hash);
+        openTxToast("11155111", purchaseTx.hash);
+        
+      } catch (error) {
+        console.error('❌ Credit purchase failed:', error);
+        setIsPurchasing(false);
+        
+        // Provide more detailed error information
+        if (error instanceof Error) {
+          if (error.message.includes('insufficient')) {
+            alert('Insufficient PYUSD balance. Please check your balance and try again.');
+          } else if (error.message.includes('allowance')) {
+            alert('Insufficient allowance. Please approve more PYUSD and try again.');
+          } else {
+            alert(`Credit purchase failed: ${error.message}`);
+          }
         } else {
-          alert(`Credit purchase failed: ${error.message}`);
+          alert('Credit purchase failed. Please check your wallet and try again.');
         }
-      } else {
-        alert('Credit purchase failed. Please check your wallet and try again.');
+        return;
       }
     }
   };

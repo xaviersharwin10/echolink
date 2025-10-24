@@ -15,6 +15,16 @@ from uuid import uuid4
 # uAgents framework
 from uagents import Agent, Context, Protocol
 
+# Chat protocol imports
+from uagents_core.contrib.protocols.chat import (
+    ChatAcknowledgement,
+    ChatMessage,
+    EndSessionContent,
+    StartSessionContent,
+    TextContent,
+    chat_protocol_spec,
+)
+
 # Import shared models
 from models import (
     PaymentValidationRequest, 
@@ -37,6 +47,21 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# ============================================================================
+# Chat Protocol Helper Functions
+# ============================================================================
+
+def create_text_chat(text: str, end_session: bool = False) -> ChatMessage:
+    """Create a text chat message."""
+    content = [TextContent(type="text", text=text)]
+    if end_session:
+        content.append(EndSessionContent(type="end-session"))
+    return ChatMessage(
+        timestamp=datetime.utcnow(),
+        msg_id=uuid4(),
+        content=content,
+    )
 
 # ============================================================================
 # Orchestrator Agent State Management
@@ -267,6 +292,103 @@ orchestrator_agent = Agent(
 orchestrator_agent.include(orchestrator_protocol)
 
 # ============================================================================
+# Chat Protocol Implementation
+# ============================================================================
+
+# Create chat protocol
+chat_proto = Protocol(spec=chat_protocol_spec)
+
+@chat_proto.on_message(ChatMessage)
+async def handle_chat_message(ctx: Context, sender: str, msg: ChatMessage):
+    """Handle incoming chat messages"""
+    ctx.logger.info(f"📨 Chat message from {sender}")
+    ctx.storage.set(str(ctx.session), sender)
+    
+    # Send acknowledgement
+    await ctx.send(
+        sender,
+        ChatAcknowledgement(
+            timestamp=datetime.utcnow(),
+            acknowledged_msg_id=msg.msg_id
+        ),
+    )
+    
+    # Process message content
+    for item in msg.content:
+        if isinstance(item, StartSessionContent):
+            ctx.logger.info(f"🎬 Start session from {sender}")
+            welcome_msg = """Welcome to EchoLink Orchestrator Agent! 🎭
+
+I coordinate payment validation and knowledge processing to provide complete query processing.
+
+To ask a question, include a token ID and payment details:
+- Format: [token:YOUR_TOKEN_ID] Your question [payment:TX_HASH]
+- Example: [token:test_007] What is the capital of France? [payment:0x123...]
+
+How can I help you with your query?"""
+            await ctx.send(sender, create_text_chat(welcome_msg))
+            continue
+            
+        elif isinstance(item, TextContent):
+            ctx.logger.info(f"📝 Text message from {sender}: {item.text[:100]}...")
+            
+            try:
+                # Extract token ID and payment details from message
+                import re
+                
+                # Extract token ID
+                token_match = re.search(r'\[token:([^\]]+)\]', item.text)
+                token_id = token_match.group(1) if token_match else None
+                
+                # Extract payment hash
+                payment_match = re.search(r'\[payment:([^\]]+)\]', item.text)
+                payment_tx_hash = payment_match.group(1) if payment_match else None
+                
+                if not token_id or not payment_tx_hash:
+                    response = """Please include both token ID and payment hash in your message.
+
+Format: [token:YOUR_TOKEN_ID] Your question [payment:TX_HASH]
+Example: [token:test_007] What is the capital of France? [payment:0x123...]"""
+                    await ctx.send(sender, create_text_chat(response))
+                    continue
+                
+                # Create query request
+                query_request = QueryRequest(
+                    query=item.text,
+                    token_id=token_id,
+                    payment_tx_hash=payment_tx_hash,
+                    user_address="chat_user",  # Default for chat
+                    use_credits=False
+                )
+                
+                # Process the query using existing functionality
+                result = await handle_rest_query(ctx, query_request)
+                
+                if result.success:
+                    response_text = f"Token: {token_id}\nPayment: {payment_tx_hash}\n\n{result.answer}"
+                else:
+                    response_text = f"Error processing query: {result.error}"
+                
+                await ctx.send(sender, create_text_chat(response_text))
+                
+            except Exception as e:
+                ctx.logger.error(f"Error processing chat message: {e}")
+                error_response = f"Sorry, I encountered an error: {str(e)}"
+                await ctx.send(sender, create_text_chat(error_response))
+                
+        elif isinstance(item, EndSessionContent):
+            ctx.logger.info(f"👋 End session from {sender}")
+            await ctx.send(sender, create_text_chat("Goodbye! 👋", end_session=True))
+
+@chat_proto.on_message(ChatAcknowledgement)
+async def handle_chat_ack(ctx: Context, sender: str, msg: ChatAcknowledgement):
+    """Handle chat acknowledgements"""
+    ctx.logger.info(f"✅ Ack from {sender} for {msg.acknowledged_msg_id}")
+
+# Include chat protocol
+orchestrator_agent.include(chat_proto, publish_manifest=True)
+
+# ============================================================================
 # REST API Support
 # ============================================================================
 
@@ -317,7 +439,7 @@ async def handle_rest_query(ctx: Context, req: QueryRequest) -> QueryResponse:
         ctx.logger.info("✅ Payment validation request sent")
         
         # Wait for the complete workflow to finish
-        max_wait_time = 60  # 60 seconds max
+        max_wait_time = 100  # 60 seconds max
         wait_interval = 0.5  # Check every 500ms
         elapsed_time = 0
         

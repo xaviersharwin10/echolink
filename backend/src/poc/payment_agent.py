@@ -14,6 +14,16 @@ from uuid import uuid4
 # uAgents framework
 from uagents import Agent, Context, Protocol
 
+# Chat protocol imports
+from uagents_core.contrib.protocols.chat import (
+    ChatAcknowledgement,
+    ChatMessage,
+    EndSessionContent,
+    StartSessionContent,
+    TextContent,
+    chat_protocol_spec,
+)
+
 # Import shared models
 from models import (
     PaymentValidationRequest, 
@@ -34,6 +44,21 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# ============================================================================
+# Chat Protocol Helper Functions
+# ============================================================================
+
+def create_text_chat(text: str, end_session: bool = False) -> ChatMessage:
+    """Create a text chat message."""
+    content = [TextContent(type="text", text=text)]
+    if end_session:
+        content.append(EndSessionContent(type="end-session"))
+    return ChatMessage(
+        timestamp=datetime.utcnow(),
+        msg_id=uuid4(),
+        content=content,
+    )
 
 # ============================================================================
 # Payment Agent Protocol
@@ -167,6 +192,99 @@ payment_agent = Agent(
 
 # Include the payment protocol
 payment_agent.include(payment_protocol)
+
+# ============================================================================
+# Chat Protocol Implementation
+# ============================================================================
+
+# Create chat protocol
+chat_proto = Protocol(spec=chat_protocol_spec)
+
+@chat_proto.on_message(ChatMessage)
+async def handle_chat_message(ctx: Context, sender: str, msg: ChatMessage):
+    """Handle incoming chat messages"""
+    ctx.logger.info(f"📨 Chat message from {sender}")
+    ctx.storage.set(str(ctx.session), sender)
+    
+    # Send acknowledgement
+    await ctx.send(
+        sender,
+        ChatAcknowledgement(
+            timestamp=datetime.utcnow(),
+            acknowledged_msg_id=msg.msg_id
+        ),
+    )
+    
+    # Process message content
+    for item in msg.content:
+        if isinstance(item, StartSessionContent):
+            ctx.logger.info(f"🎬 Start session from {sender}")
+            welcome_msg = """Welcome to EchoLink Payment Agent! 💳
+
+I handle payment validation for both credit transactions and direct PYUSD payments.
+
+To validate a payment, provide the transaction details:
+- Format: [tx:TRANSACTION_HASH] [user:USER_ADDRESS] [type:CREDIT|PYUSD]
+- Example: [tx:0x123...] [user:0xabc...] [type:CREDIT]
+
+How can I help you with payment validation?"""
+            await ctx.send(sender, create_text_chat(welcome_msg))
+            continue
+            
+        elif isinstance(item, TextContent):
+            ctx.logger.info(f"📝 Text message from {sender}: {item.text[:100]}...")
+            
+            try:
+                # Extract transaction details from message
+                import re
+                
+                # Extract transaction hash
+                tx_match = re.search(r'\[tx:([^\]]+)\]', item.text)
+                tx_hash = tx_match.group(1) if tx_match else None
+                
+                # Extract user address
+                user_match = re.search(r'\[user:([^\]]+)\]', item.text)
+                user_address = user_match.group(1) if user_match else None
+                
+                # Extract payment type
+                type_match = re.search(r'\[type:([^\]]+)\]', item.text)
+                payment_type = type_match.group(1).upper() if type_match else None
+                
+                if not tx_hash or not user_address or not payment_type:
+                    response = """Please include all required payment details in your message.
+
+Format: [tx:TRANSACTION_HASH] [user:USER_ADDRESS] [type:CREDIT|PYUSD]
+Example: [tx:0x123...] [user:0xabc...] [type:CREDIT]"""
+                    await ctx.send(sender, create_text_chat(response))
+                    continue
+                
+                # Create payment validation request
+                validation_request = PaymentValidationRequest(
+                    query_id="chat_query",
+                    payment_tx_hash=tx_hash,
+                    user_address=user_address,
+                    use_credits=(payment_type == "CREDIT")
+                )
+                
+                # Process the payment validation using existing functionality
+                await handle_payment_validation(ctx, sender, validation_request)
+                
+            except Exception as e:
+                ctx.logger.error(f"Error processing chat message: {e}")
+                error_response = f"Sorry, I encountered an error: {str(e)}"
+                await ctx.send(sender, create_text_chat(error_response))
+                
+        elif isinstance(item, EndSessionContent):
+            ctx.logger.info(f"👋 End session from {sender}")
+            await ctx.send(sender, create_text_chat("Goodbye! 👋", end_session=True))
+
+@chat_proto.on_message(ChatAcknowledgement)
+async def handle_chat_ack(ctx: Context, sender: str, msg: ChatAcknowledgement):
+    """Handle chat acknowledgements"""
+    ctx.logger.info(f"✅ Ack from {sender} for {msg.acknowledged_msg_id}")
+
+# Include chat protocol
+payment_agent.include(chat_proto, publish_manifest=True)
 
 @payment_agent.on_event("startup")
 async def startup(ctx: Context):

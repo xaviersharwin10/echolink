@@ -350,7 +350,7 @@ export const EchoLeaderboard: React.FC = () => {
     const total = priceDistribution.reduce((sum, tier) => sum + tier.count, 0);
 
     return (
-      <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 h-full">
+      <div className="h-full">
         <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
             ⚖️ Knowledge Pricing Distribution
         </h3>
@@ -388,7 +388,7 @@ export const EchoLeaderboard: React.FC = () => {
     const maxQueries = topEchos.length > 0 ? Math.max(...topEchos.map(e => e.totalQueries)) : 1;
 
     return (
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 h-full">
+        <div className="h-full">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
                 📈 Top 5 Echos by Query Volume
             </h3>
@@ -421,7 +421,7 @@ export const EchoLeaderboard: React.FC = () => {
   };
   
   const renderCreatorLeaderboard = () => (
-    <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 h-full">
+    <div className="h-full">
         <h3 className="text-xl font-bold text-gray-900 mb-4">👑 Top Creators by Net Earnings</h3>
         <p className="text-xs text-gray-500 mb-6">
             The top 5 knowledge entrepreneurs based on total verified PYUSD earned.
@@ -492,7 +492,7 @@ export const EchoLeaderboard: React.FC = () => {
 
     // Echo Table
     return (
-      <div className="overflow-x-auto mt-8 bg-white rounded-xl shadow-lg">
+      <div className="overflow-x-auto">
         <h3 className="text-2xl font-bold text-gray-900 mb-4 p-4 border-b">📊 Top Performing Knowledge Echos</h3>
         
         <table className="min-w-full divide-y divide-gray-200">
@@ -538,49 +538,94 @@ export const EchoLeaderboard: React.FC = () => {
 
 
   return (
-    <div className="p-6">
-      <h2 className="text-3xl font-extrabold text-gray-900 mb-2 flex items-center">
-        🏆 Echo Marketplace Leaderboard
-      </h2>
-      <p className="mb-6 text-lg text-gray-600 flex items-center">
-        Rankings are **fully verified** by on-chain transaction data retrieved directly from **Blockscout's API**.
-        
-      </p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-12">
+          {/* Header Section */}
+          <div className="text-center mb-12 animate-fade-in">
+            <h2 className="text-5xl lg:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700 mb-4">
+              🏆 Echo Marketplace Leaderboard
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Rankings are fully verified by on-chain transaction data retrieved directly from Blockscout's API
+            </p>
+          </div>
 
-      {/* --- SECTION 1: CORE MARKET STATS --- */}
-      <h3 className="text-2xl font-bold text-gray-900 mb-4 border-b pb-2">🌐 Protocol Overview</h3>
-      <div className="grid grid-cols-4 gap-6 mb-8">
-        {renderStatCard("Total Echos Minted", `${totalEchosCount}`, "🧠", "text-indigo-600 bg-indigo-50")}
-        {renderStatCard("Queries Processed", `${totalQueriesProcessed.toLocaleString()}`, "❓", "text-purple-600 bg-purple-50")}
-        {renderStatCard("Market Value Transacted", `$${totalMarketValue.toFixed(2)}`, "💰", "text-green-600 bg-green-50")}
-        {renderStatCard("Active Echos (7D)", `${activeEchosLast7D}`, "⚡", "text-yellow-600 bg-yellow-50")}
-      </div>
-      
-      {/* --- NEW SECTION 1B: FINANCIAL EFFICIENCY (2-column layout) --- */}
-      <h3 className="text-2xl font-bold text-gray-900 mb-4 border-b pb-2">📈 Financial Efficiency</h3>
-      <div className="grid grid-cols-4 gap-6 mb-8">
-        {renderStatCard("Protocol Fees Collected", `$${totalProtocolFees.toFixed(2)}`, "🧾", "text-red-600 bg-red-50")}
-        {renderStatCard("Avg Revenue Per Echo", `$${averageRevenuePerEcho.toFixed(2)}`, "📈", "text-cyan-600 bg-cyan-50")}
-      </div>
-
-      {isLoading ? renderLeaderboardTable() : (
-        <div className="grid grid-cols-1 gap-6">
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {priceDistribution.length > 0 && renderPriceDistribution()}
-                {leaderboard.length > 0 && renderTopEchosChart()}
+          {/* Protocol Overview Section */}
+          <div className="mb-8 animate-fade-in-delay">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
+              <div className="flex items-center mb-6">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                  🌐
+                </div>
+                <h3 className="text-2xl font-semibold text-gray-800">Protocol Overview</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {renderStatCard("Total Echos Minted", `${totalEchosCount}`, "🧠", "text-indigo-600 bg-indigo-50")}
+                {renderStatCard("Queries Processed", `${totalQueriesProcessed.toLocaleString()}`, "❓", "text-purple-600 bg-purple-50")}
+                {renderStatCard("Market Value Transacted", `$${totalMarketValue.toFixed(2)}`, "💰", "text-green-600 bg-green-50")}
+                {renderStatCard("Active Echos (7D)", `${activeEchosLast7D}`, "⚡", "text-yellow-600 bg-yellow-50")}
+              </div>
             </div>
-
-            {/* Row 2: Creator Leaderboard (Full Width) */}
-            <div className="grid grid-cols-1">
-                {creatorLeaderboard.length > 0 && renderCreatorLeaderboard()}
+          </div>
+          
+          {/* Financial Efficiency Section */}
+          <div className="mb-8 animate-fade-in-delay-2">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
+              <div className="flex items-center mb-6">
+                <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                  📈
+                </div>
+                <h3 className="text-2xl font-semibold text-gray-800">Financial Efficiency</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {renderStatCard("Protocol Fees Collected", `$${totalProtocolFees.toFixed(2)}`, "🧾", "text-red-600 bg-red-50")}
+                {renderStatCard("Avg Revenue Per Echo", `$${averageRevenuePerEcho.toFixed(2)}`, "📈", "text-cyan-600 bg-cyan-50")}
+              </div>
             </div>
-        </div>
-      )}
-      
-      {/* --- SECTION 2: ECHO LEADERBOARD TABLE --- */}
-      {!isLoading && renderLeaderboardTable()}
+          </div>
 
+          {isLoading ? (
+            <div className="mb-8 animate-fade-in-delay-2">
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-12 shadow-lg border border-gray-200/50 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">Aggregating queries and earnings from Blockscout...</h3>
+                <p className="text-gray-600">This may take a few moments...</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Charts Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 animate-fade-in-delay-2">
+                {priceDistribution.length > 0 && (
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200/50">
+                    {renderPriceDistribution()}
+                  </div>
+                )}
+                {leaderboard.length > 0 && (
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200/50">
+                    {renderTopEchosChart()}
+                  </div>
+                )}
+              </div>
+
+              {/* Creator Leaderboard */}
+              {creatorLeaderboard.length > 0 && (
+                <div className="mb-8 animate-fade-in-delay-2">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-gray-200/50">
+                    {renderCreatorLeaderboard()}
+                  </div>
+                </div>
+              )}
+
+              {/* Echo Leaderboard Table */}
+              <div className="animate-fade-in-delay-2">
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50">
+                  {renderLeaderboardTable()}
+                </div>
+              </div>
+            </>
+          )}
+      </div>
     </div>
   );
 };

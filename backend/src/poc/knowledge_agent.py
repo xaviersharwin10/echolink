@@ -15,6 +15,16 @@ from uuid import uuid4
 # uAgents framework
 from uagents import Agent, Context, Protocol
 
+# Chat protocol imports
+from uagents_core.contrib.protocols.chat import (
+    ChatAcknowledgement,
+    ChatMessage,
+    EndSessionContent,
+    StartSessionContent,
+    TextContent,
+    chat_protocol_spec,
+)
+
 # Import shared models
 from models import (
     KnowledgeQueryRequest, 
@@ -45,6 +55,21 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ============================================================================
+# Chat Protocol Helper Functions
+# ============================================================================
+
+def create_text_chat(text: str, end_session: bool = False) -> ChatMessage:
+    """Create a text chat message."""
+    content = [TextContent(type="text", text=text)]
+    if end_session:
+        content.append(EndSessionContent(type="end-session"))
+    return ChatMessage(
+        timestamp=datetime.utcnow(),
+        msg_id=uuid4(),
+        content=content,
+    )
+
+# ============================================================================
 # Intelligent Query Engine
 # ============================================================================
 
@@ -69,7 +94,7 @@ class IntelligentQueryEngine:
             logger.info("🧠 Initializing Knowledge Agent components...")
             
             # Initialize LLM
-            self.llm = ASIOneLLM(api_key="")
+            self.llm = ASIOneLLM(api_key="sk_941e448a52494b6298cfd3af219c81b120469ca2583042988c5747ce2e8ae036")
             logger.info("✅ LLM initialized")
             
             # Initialize MeTTa
@@ -197,7 +222,7 @@ class IntelligentQueryEngine:
             relevant_facts = []
             for i, (score, idx) in enumerate(zip(scores[0], indices[0])):
                 logger.info(f"  {i+1}. Score: {score:.3f}, Index: {idx}")
-                if score > 0.3:  # Threshold for relevance
+                if score > 0.2:  # Threshold for relevance
                     if 'facts' in self.fact_mapping and idx < len(self.fact_mapping['facts']):
                         fact = self.fact_mapping['facts'][idx]
                         relevant_facts.append(fact)
@@ -250,7 +275,7 @@ class IntelligentQueryEngine:
             # Prepare context
             context = {
                 "query": query,
-                "relevant_facts": facts[:5],  # Limit to top 5 facts
+                "relevant_facts": facts[:10],  # Limit to top 5 facts
                 "reasoning": reasoning
             }
             
@@ -360,6 +385,88 @@ knowledge_agent = Agent(
 
 # Include the knowledge protocol
 knowledge_agent.include(knowledge_protocol)
+
+# ============================================================================
+# Chat Protocol Implementation
+# ============================================================================
+
+# Create chat protocol
+chat_proto = Protocol(spec=chat_protocol_spec)
+
+@chat_proto.on_message(ChatMessage)
+async def handle_chat_message(ctx: Context, sender: str, msg: ChatMessage):
+    """Handle incoming chat messages"""
+    ctx.logger.info(f"📨 Chat message from {sender}")
+    ctx.storage.set(str(ctx.session), sender)
+    
+    # Send acknowledgement
+    await ctx.send(
+        sender,
+        ChatAcknowledgement(
+            timestamp=datetime.utcnow(),
+            acknowledged_msg_id=msg.msg_id
+        ),
+    )
+    
+    # Process message content
+    for item in msg.content:
+        if isinstance(item, StartSessionContent):
+            ctx.logger.info(f"🎬 Start session from {sender}")
+            welcome_msg = """Welcome to EchoLink Knowledge Agent! 🧠
+
+I specialize in MeTTa reasoning and vector database lookup for knowledge queries.
+
+To ask a question, include a token ID:
+- Format: [token:YOUR_TOKEN_ID] Your question
+- Example: [token:test_007] What is the capital of France?
+
+How can I help you with your knowledge query?"""
+            await ctx.send(sender, create_text_chat(welcome_msg))
+            continue
+            
+        elif isinstance(item, TextContent):
+            ctx.logger.info(f"📝 Text message from {sender}: {item.text[:100]}...")
+            
+            try:
+                # Initialize query engine if not already done
+                if not hasattr(ctx, 'query_engine'):
+                    ctx.query_engine = IntelligentQueryEngine()
+                    await ctx.query_engine.initialize()
+                
+                # Extract token ID from message
+                token_id = ctx.query_engine.extract_token_id(item.text)
+                
+                if not token_id:
+                    response = "Please include a token ID in your message.\n\nFormat: [token:YOUR_TOKEN_ID] Your question"
+                    await ctx.send(sender, create_text_chat(response))
+                    continue
+                
+                # Process the query using existing functionality
+                result = await ctx.query_engine.process_query(item.text, token_id)
+                
+                if result["success"]:
+                    response_text = f"Token: {token_id}\n\n{result['answer']}"
+                else:
+                    response_text = f"Error processing query: {result.get('error', 'Unknown error')}"
+                
+                await ctx.send(sender, create_text_chat(response_text))
+                
+            except Exception as e:
+                ctx.logger.error(f"Error processing chat message: {e}")
+                error_response = f"Sorry, I encountered an error: {str(e)}"
+                await ctx.send(sender, create_text_chat(error_response))
+                
+        elif isinstance(item, EndSessionContent):
+            ctx.logger.info(f"👋 End session from {sender}")
+            await ctx.send(sender, create_text_chat("Goodbye! 👋", end_session=True))
+
+@chat_proto.on_message(ChatAcknowledgement)
+async def handle_chat_ack(ctx: Context, sender: str, msg: ChatAcknowledgement):
+    """Handle chat acknowledgements"""
+    ctx.logger.info(f"✅ Ack from {sender} for {msg.acknowledged_msg_id}")
+
+# Include chat protocol
+knowledge_agent.include(chat_proto, publish_manifest=True)
 
 @knowledge_agent.on_event("startup")
 async def startup(ctx: Context):

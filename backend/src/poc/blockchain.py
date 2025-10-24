@@ -319,7 +319,7 @@ class PaymentValidator:
                 log.info(f"🔍 Log {i+1}: Address {log_entry.address}")
                 
                 # Check if it's a CreditsUsed event from EchoNFT contract
-                if (log_entry.address.lower() == "0x7f10Df09c2d91C8C6A8B8e1ECeAD336eE39C3c9f".lower() and 
+                if (log_entry.address.lower() == "0x287b5a9EB0cAbDBD1860BCEF5f847C2958129FF4".lower() and 
                     len(log_entry.topics) >= 3 and 
                     log_entry.topics[0].hex() == credits_used_topic):
                     

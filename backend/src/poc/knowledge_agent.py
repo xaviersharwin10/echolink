@@ -94,7 +94,7 @@ class IntelligentQueryEngine:
             logger.info("🧠 Initializing Knowledge Agent components...")
             
             # Initialize LLM
-            self.llm = ASIOneLLM(api_key="sk_941e448a52494b6298cfd3af219c81b120469ca2583042988c5747ce2e8ae036")
+            self.llm = ASIOneLLM(api_key="")
             logger.info("✅ LLM initialized")
             
             # Initialize MeTTa

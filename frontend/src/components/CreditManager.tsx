@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAccount, useContractWrite, useWaitForTransaction, useContractRead } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
+import { useNotification } from '@blockscout/app-sdk';
 import { ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI } from '../config/contracts';
 
 const PYUSD_ADDRESS = '0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9';
@@ -41,6 +42,7 @@ export const CreditManager: React.FC = () => {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const { address, isConnected } = useAccount();
+  const { openTxToast } = useNotification();
 
   // Read PYUSD balance
   const { data: pyusdBalance, refetch: refetchBalance } = useContractRead({
@@ -121,6 +123,7 @@ export const CreditManager: React.FC = () => {
           args: [ECHOLNK_NFT_ADDRESS, requiredAllowance],
         });
         console.log('✅ Approval transaction sent:', approveTx.hash);
+        openTxToast("11155111", approveTx.hash);
         
         // Wait for approval confirmation
         console.log('⏳ Waiting for approval confirmation...');
@@ -171,7 +174,7 @@ export const CreditManager: React.FC = () => {
         args: [amount],
       });
       console.log('✅ Purchase transaction sent:', purchaseTx.hash);
-      
+      openTxToast("11155111", purchaseTx.hash);
     } catch (error) {
       console.error('❌ Credit purchase failed:', error);
       setIsPurchasing(false);

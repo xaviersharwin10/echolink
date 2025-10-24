@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAccount, useContractWrite, useWaitForTransaction } from 'wagmi';
+import { useNotification } from '@blockscout/app-sdk';
 import { ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI } from '../config/contracts';
 
 interface MintEchoProps {
@@ -21,7 +22,8 @@ export const MintEcho: React.FC<MintEchoProps> = ({
   const [echoDescription, setEchoDescription] = useState(propEchoDescription || '');
   const [pricePerQuery, setPricePerQuery] = useState(propPricePerQuery || '0.1');
   const { address } = useAccount();
-
+  const { openTxToast } = useNotification();
+  
   const { data, write, isLoading: isWriteLoading } = useContractWrite({
     address: ECHOLNK_NFT_ADDRESS,
     abi: ECHO_NFT_ABI,
@@ -32,8 +34,14 @@ export const MintEcho: React.FC<MintEchoProps> = ({
     hash: data?.hash,
   });
 
+  useEffect(() => {
+    if (data?.hash) {
+      openTxToast("11155111", data.hash);
+    }
+  }, [data?.hash, openTxToast]);
+
   // Handle mint completion
-  React.useEffect(() => {
+  useEffect(() => {
     if (isSuccess && onMintComplete) {
       onMintComplete();
     }
@@ -112,8 +120,8 @@ export const MintEcho: React.FC<MintEchoProps> = ({
           onClick={handleMint}
           disabled={!address || !echoName.trim() || !echoDescription.trim() || isWriteLoading || isTransactionLoading}
           className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold 
-                     hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed
-                     transition-colors duration-200"
+                    hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed
+                    transition-colors duration-200"
         >
           {isWriteLoading || isTransactionLoading ? 'Minting...' : 'Mint Echo NFT'}
         </button>
@@ -133,4 +141,3 @@ export const MintEcho: React.FC<MintEchoProps> = ({
     </div>
   );
 };
-

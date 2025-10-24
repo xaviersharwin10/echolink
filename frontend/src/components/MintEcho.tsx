@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAccount, useContractWrite, useWaitForTransaction } from 'wagmi';
+import { useAccount, useContractWrite, useWaitForTransaction, useChainId} from 'wagmi';
 import { useNotification } from '@blockscout/app-sdk';
 import { ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI } from '../config/contracts';
 
@@ -22,6 +22,7 @@ export const MintEcho: React.FC<MintEchoProps> = ({
   const [echoDescription, setEchoDescription] = useState(propEchoDescription || '');
   const [pricePerQuery, setPricePerQuery] = useState(propPricePerQuery || '0.1');
   const { address } = useAccount();
+  const chainId = useChainId();
   const { openTxToast } = useNotification();
   
   const { data, write, isLoading: isWriteLoading } = useContractWrite({
@@ -36,7 +37,7 @@ export const MintEcho: React.FC<MintEchoProps> = ({
 
   useEffect(() => {
     if (data?.hash) {
-      openTxToast("11155111", data.hash);
+      openTxToast(chainId.toString(), data.hash);
     }
   }, [data?.hash, openTxToast]);
 

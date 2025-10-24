@@ -3,6 +3,9 @@
 export const ECHOLNK_NFT_ADDRESS = "0x287b5a9EB0cAbDBD1860BCEF5f847C2958129FF4" as `0x${string}`;
 export const QUERY_PAYMENTS_ADDRESS = "0xFf08e351Bf16fE0703108cf9B4AeDe3a16fd0a46" as `0x${string}`;
 
+export const QUERY_PAID_TOPIC = '0xad43474671daf07280e68edd7b27b2f40c4c24ea677afd418a3a407fa27f4058'; 
+export const CREDITS_USED_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+
 export const ECHO_NFT_ABI = [
   {
     "inputs": [

@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { readContract } from '@wagmi/core';
 import axios from 'axios';
-import { ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI, QUERY_PAYMENTS_ADDRESS } from '../config/contracts'; 
-import { useAccount } from 'wagmi';
+import { ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI, QUERY_PAYMENTS_ADDRESS, QUERY_PAID_TOPIC, CREDITS_USED_TOPIC } from '../config/contracts'; 
 
 // --- Configuration ---
 const BLOCKSCOUT_API_BASE = 'https://eth-sepolia.blockscout.com/api';
 const PYUSD_DECIMALS = 6;
-const PYUSD_TOKEN_ADDRESS = '0xCaC524BcA292aaade2df8a05cC58F0a65B1B3bB9'; 
 const PYUSD_RATE_PER_CREDIT = 0.01;
 const PROTOCOL_FEE_PERCENT = 0.05; 
 
@@ -75,8 +73,6 @@ const generateBarColor = (tokenId: number): string => {
     return `hsl(${hue}, 60%, 55%)`; 
 };
 
-
-
 export const EchoLeaderboard: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<EchoStats[]>([]);
   const [creatorLeaderboard, setCreatorLeaderboard] = useState<CreatorStats[]>([]);
@@ -105,6 +101,7 @@ export const EchoLeaderboard: React.FC = () => {
 
       const [tokenIds, names, descriptions, creators, pricesPerQuery] = allEchoesData;
       const echoMetadataMap = new Map<number, { name: string; creator: string; price: number }>();
+      console.log("echo",echoMetadataMap);
       
       // Initialize price distribution calculation
       const currentPriceDistribution: PriceTierData[] = JSON.parse(JSON.stringify(PRICE_TIERS)); // Deep copy
@@ -145,13 +142,10 @@ export const EchoLeaderboard: React.FC = () => {
 
 
       // --- Step 2: Define and Fetch Events from Blockscout ---
-      
-      const queryPaidTopic = '0xad43474671daf07280e68edd7b27b2f40c4c24ea677afd418a3a407fa27f4058'; 
-      const creditsUsedTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'; 
 
       const paymentEvents = await axios.all([
-        axios.get(`${BLOCKSCOUT_API_BASE}`, { params: { module: 'logs', action: 'getLogs', address: QUERY_PAYMENTS_ADDRESS, topic0: queryPaidTopic, fromBlock: 0, toBlock: 'latest', }}),
-        axios.get(`${BLOCKSCOUT_API_BASE}`, { params: { module: 'logs', action: 'getLogs', address: ECHOLNK_NFT_ADDRESS, topic0: creditsUsedTopic, fromBlock: 0, toBlock: 'latest', }}),
+        axios.get(`${BLOCKSCOUT_API_BASE}`, { params: { module: 'logs', action: 'getLogs', address: QUERY_PAYMENTS_ADDRESS, topic0: QUERY_PAID_TOPIC, fromBlock: 0, toBlock: 'latest', }}),
+        axios.get(`${BLOCKSCOUT_API_BASE}`, { params: { module: 'logs', action: 'getLogs', address: ECHOLNK_NFT_ADDRESS, topic0: CREDITS_USED_TOPIC, fromBlock: 0, toBlock: 'latest', }}),
       ]);
       
       const rawQueryPaidEvents: LogEvent[] = paymentEvents[0].data.result || [];

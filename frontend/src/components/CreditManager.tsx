@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAccount, useContractWrite, useWaitForTransaction, useContractRead } from 'wagmi';
+import { useAccount, useContractWrite, useWaitForTransaction, useContractRead, useChainId} from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 import { useNotification } from '@blockscout/app-sdk';
 import { ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI } from '../config/contracts';
@@ -42,6 +42,7 @@ export const CreditManager: React.FC = () => {
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const { address, isConnected } = useAccount();
+  const chainId = useChainId();
   const { openTxToast } = useNotification();
 
   // Read PYUSD balance
@@ -123,7 +124,7 @@ export const CreditManager: React.FC = () => {
           args: [ECHOLNK_NFT_ADDRESS, requiredAllowance],
         });
         console.log('✅ Approval transaction sent:', approveTx.hash);
-        openTxToast("11155111", approveTx.hash);
+        openTxToast(chainId.toString(), approveTx.hash);
         
         // Wait for approval confirmation
         console.log('⏳ Waiting for approval confirmation...');
@@ -168,7 +169,7 @@ export const CreditManager: React.FC = () => {
             args: [amount],
           });
           console.log('✅ Purchase transaction sent:', purchaseTx.hash);
-          openTxToast("11155111", purchaseTx.hash);
+          openTxToast(chainId.toString(), purchaseTx.hash);
           
         } catch (error) {
           console.error('❌ Credit purchase failed:', error);
@@ -205,7 +206,7 @@ export const CreditManager: React.FC = () => {
           args: [amount],
         });
         console.log('✅ Purchase transaction sent:', purchaseTx.hash);
-        openTxToast("11155111", purchaseTx.hash);
+        openTxToast(chainId.toString(), purchaseTx.hash);
         
       } catch (error) {
         console.error('❌ Credit purchase failed:', error);

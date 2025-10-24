@@ -2,11 +2,82 @@ import React, { useState, useEffect } from 'react';
 import { readContract } from '@wagmi/core';
 import { EchoCard, EchoInfo } from './EchoCard';
 import { ChatInterface } from './ChatInterface';
-import { ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI } from '../config/contracts';
+import { ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI,QUERY_PAYMENTS_ADDRESS, QUERY_PAID_TOPIC, CREDITS_USED_TOPIC } from '../config/contracts';
 
-const API_BASE_URL = 'https://eth-sepolia.blockscout.com/api/v2';
-const ACTIVITY_THRESHOLD = 3;
-const PYUSD_TOKEN_ADDRESS = '0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9';
+const API_BASE_URL = 'https://eth-sepolia.blockscout.com/api';
+const ACTIVITY_THRESHOLD = 1;
+
+interface LogEvent {
+    topics: string[];
+    data: string;
+    timeStamp: string;
+}
+
+// --- Reusable Blockscout Helpers ---
+
+const safeParseTokenId = (hexTopic: string): number => {
+    try {
+        const nonZeroIndex = hexTopic.slice(2).search(/[^0]/);
+        if (nonZeroIndex === -1) return 0;
+        const cleanHex = '0x' + hexTopic.slice(2 + nonZeroIndex);
+        return Number(BigInt(cleanHex));
+    } catch (e) {
+        return 0;
+    }
+};
+
+const fetchBlockscoutData = async (params: Record<string, string>): Promise<any> => {
+    const query = new URLSearchParams(params).toString();
+    const response = await fetch(`${API_BASE_URL}?${query}`);
+    const data = await response.json();
+    return data.result || [];
+};
+
+const fetchEchoQueryStats = async (tokenIdNumber: number) => {
+    const [queryPaidLogs, creditsUsedLogs] = await Promise.all([
+ // 1. QueryPaid (Direct PYUSD): Logs from the QueryPayments contract
+          fetchBlockscoutData({
+            module: 'logs',
+            action: 'getLogs',
+            address: QUERY_PAYMENTS_ADDRESS,
+            topic0: QUERY_PAID_TOPIC,
+            fromBlock: '0', 
+            toBlock: 'latest'
+          }),
+          // 2. CreditsUsed: Logs from the EchoNFT contract
+          fetchBlockscoutData({
+            module: 'logs',
+            action: 'getLogs',
+            address: ECHOLNK_NFT_ADDRESS,
+            topic0: CREDITS_USED_TOPIC,
+            fromBlock: '0', 
+            toBlock: 'latest', 
+          }),
+    ]);
+
+    let totalQueries = 0;
+
+    const processLogs = (logs: LogEvent[], isCredit: boolean) => {
+        logs.forEach(log => {
+            // QueryPaid (Topic 3), CreditsUsed (Topic 2)
+            const tokenTopicIndex = isCredit ? 2 : 3;
+            
+            if (log.topics.length > tokenTopicIndex) {
+                const logTokenId = safeParseTokenId(log.topics[tokenTopicIndex]);
+                
+                if (logTokenId === tokenIdNumber) {
+                    totalQueries++;
+                }
+            }
+        });
+    };
+
+    processLogs(queryPaidLogs, false);
+    processLogs(creditsUsedLogs, true);
+
+    return { totalQueries };
+};
+
 
 const hardcodedData: { [key: number]: { name: string; description: string; imageUrl: string } } = {
   1: { name: "Economic Principles", description: "An interactive AI trained on foundational economic theories and models.", imageUrl: "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?w=800" },
@@ -52,15 +123,8 @@ bigint[], string[], string[], `0x${string}`[], bigint[], boolean[]];        // P
               args: [BigInt(tokenId)],
             });
 
-            const activityRes = await fetch(`${API_BASE_URL}/addresses/${creator}/token-transfers?token=${PYUSD_TOKEN_ADDRESS}`);
-            const activityData = await activityRes.json();
-
-            const incomingTransfers = activityData?.items.filter((tx: any) => tx.to.hash.toLowerCase() === creator.toLowerCase());
-
-            const totalQueries = incomingTransfers.length || 0;
-            const isCreatorActive = totalQueries > ACTIVITY_THRESHOLD;
-            
-            // Use hardcoded data if available, otherwise use contract data
+            const { totalQueries } = await fetchEchoQueryStats(tokenId);
+            const isCreatorActive = totalQueries > ACTIVITY_THRESHOLD; 
             const hardcoded = hardcodedData[tokenId] || {
               name: name || `Echo #${tokenId}`,
               description: description || "An AI entity containing a unique body of knowledge, ready for you to explore.",

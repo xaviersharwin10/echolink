@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNotification } from '@blockscout/app-sdk';
-import { useAccount, useContractWrite, useWaitForTransaction, useContractRead } from 'wagmi';
+import { useAccount, useContractWrite, useWaitForTransaction, useContractRead, useChainId } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 import { QUERY_PAYMENTS_ADDRESS, QUERY_PAYMENTS_ABI, ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI } from '../config/contracts';
 import { EchoAnalytics } from './EchoAnalytics';
@@ -68,6 +68,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
   const [creditTxHash, setCreditTxHash] = useState<`0x${string}` | undefined>();
 
   const { address, isConnected } = useAccount();
+  const chainId = useChainId()
   const { openTxToast } = useNotification();
 
   // ✅ Fetch Echo data from EchoNFT contract
@@ -180,7 +181,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
             args: [creatorAddress as `0x${string}`, amount, tokenId], // ✅ Using dynamic creator address
           });
           console.log('✅ Payment transaction sent:', paymentTx.hash);
-          openTxToast("11155111", paymentTx.hash);
+          openTxToast(chainId.toString(), paymentTx.hash);
           setPaymentTxHash(paymentTx.hash);
           setPaymentStep('paying');
         } catch (error: any) {
@@ -374,7 +375,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
         });
         
         console.log('✅ Credit transaction sent:', creditTx.hash);
-        openTxToast("11155111", creditTx.hash);
+        openTxToast(chainId.toString(), creditTx.hash);
         setCreditTxHash(creditTx.hash);
         
       } catch (error: any) {
@@ -402,7 +403,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
         });
         
         console.log('✅ Approval transaction sent:', approveTx.hash);
-        openTxToast("11155111", approveTx.hash); // "11155111" is the chain ID for Sepolia
+        openTxToast(chainId.toString(), approveTx.hash); // "11155111" is the chain ID for Sepolia
         setApproveTxHash(approveTx.hash);
         
       } catch (error: any) {

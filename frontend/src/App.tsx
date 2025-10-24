@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect} from "react";
 import { WagmiConfig } from "wagmi";
 import { RainbowKitProvider, ConnectButton } from "@rainbow-me/rainbowkit";
 import "@rainbow-me/rainbowkit/styles.css";
@@ -10,10 +10,70 @@ import { CreatorStudio } from "./components/CreatorStudio";
 import { EchoGallery } from "./components/EchoGallery";
 import { CreditManager } from "./components/CreditManager";
 import { EchoLeaderboard } from "./components/EchoLeaderboard";
+import { DiscoveryPage } from "./components/DiscoveryPage";
+
+// --- Floating Chatbot Component ---
+const FloatingChatbot = () => {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+        <>
+            {/* 1. Pop-up Window */}
+            {isOpen && (
+                <div 
+                  className="fixed bottom-24 right-6 w-full max-w-lg h-[900px] bg-white border border-gray-300 rounded-xl shadow-2xl z-50 overflow-hidden transition-all duration-300 transform scale-100"
+                  style={{ maxHeight: 'calc(100vh - 100px)' }}
+                >
+                  <div className="flex justify-between items-center p-3 bg-purple-600 text-white shadow-md">
+                    <h4 className="text-lg font-semibold">🤖 AI Analyst (Blockscout MCP)</h4>
+                    <button 
+                      onClick={() => setIsOpen(false)}
+                      className="text-white hover:text-purple-200 transition-colors p-1 rounded-full hover:bg-purple-700"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="h-[calc(100%-48px)] overflow-y-auto">
+                    <DiscoveryPage isWidget={true} /> 
+                  </div>
+                </div>
+            )}
+            
+            {/* 2. Toggle Button */}
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="fixed bottom-6 right-6 p-4 bg-purple-600 text-white rounded-full shadow-xl hover:bg-purple-700 transition-all duration-300 z-50 transform hover:scale-105"
+                title="Open AI Analyst"
+            >
+                {isOpen ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                )}
+            </button>
+        </>
+    );
+}
 
 function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'mint' | 'gallery' | 'credits' | 'leaderboard'>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+   useEffect(() => {
+    // Request notification permissions on app load
+    if ("Notification" in window) {
+      Notification.requestPermission().then(permission => {
+        console.log("Notification permission:", permission);
+      });
+    }
+    console.log("App mounted, notification providers initialized");
+  }, []);
+
 
   return (
     <WagmiConfig config={wagmiConfig}>
@@ -155,7 +215,7 @@ function App() {
               </div>
             )}
           </main>
-
+          <FloatingChatbot />
           {/* Footer */}
           <footer className="mt-12 pb-8 text-center text-gray-500 bg-white/40 backdrop-blur-sm">
             <p className="text-sm">

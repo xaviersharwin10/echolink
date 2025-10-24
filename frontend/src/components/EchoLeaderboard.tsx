@@ -12,7 +12,7 @@ const PROTOCOL_FEE_PERCENT = 0.05;
 // Price Tiers for Visualization
 const PRICE_TIERS = [
     { label: "$0.00 - $0.10", max: 0.10, count: 0, color: 'bg-green-100' },
-    { label: "$0.11 - $0.50", max: 0.50, count: 0, color: 'bg-yellow-100' },
+    { label: "$0.11 - $0.50", max: 0.50, count: 0, color: 'bg-yellow-200' },
     { label: "$0.51+", max: Infinity, count: 0, color: 'bg-red-100' }
 ];
 
@@ -31,9 +31,10 @@ interface CreatorStats {
     address: string;
     totalEchos: number;
     totalEarnings: number;
+    totalQueries: number;
     topEchoId: number | null;
-    totalWalletTxs: number; // Total general transactions by this address
-    highValueEchoRatio: number; // % of Echos priced >= $0.50
+    totalWalletTxs: number;
+    highValueEchoRatio: number;
 }
 interface LogEvent {
     address: string;
@@ -257,6 +258,7 @@ export const EchoLeaderboard: React.FC = () => {
                   address: creatorAddress,
                   totalEchos: 0,
                   totalEarnings: 0,
+                  totalQueries: 0,
                   topEchoId: null,
                   totalWalletTxs: 0, 
                   highValueEchoRatio: ratio, // Store the calculated ratio
@@ -265,6 +267,7 @@ export const EchoLeaderboard: React.FC = () => {
           const creatorEntry = creatorMap.get(creatorAddress)!;
           creatorEntry.totalEchos += 1;
           creatorEntry.totalEarnings += echo.totalPYUSDEarned;
+          creatorEntry.totalQueries += echo.totalQueries;
 
           if (creatorEntry.topEchoId === null) {
             creatorEntry.topEchoId = echo.tokenId;
@@ -424,11 +427,12 @@ export const EchoLeaderboard: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                     <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+                        <th className="px-3 py-2  text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Creator Address</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Echos</th>
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">TXs</th> 
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Quality</th> 
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Queries</th>
+                        {/* <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">TXs</th> 
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Quality</th>  */}
                         <th className="px-3 py-2 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Earnings</th>
                     </tr>
                 </thead>
@@ -444,12 +448,15 @@ export const EchoLeaderboard: React.FC = () => {
                             <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-purple-700 font-semibold">
                                 {creator.totalEchos}
                             </td>
-                            <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-700 font-semibold">
-                                {creator.totalWalletTxs.toLocaleString()} 
+                             <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-purple-700 font-semibold">
+                                {creator.totalQueries}
+                            </td>
+                            {/* <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-700 font-semibold">
+                                {creator.totalWalletTxs.toLocaleString()} 
                             </td>
                             <td className="px-3 py-3 whitespace-nowrap text-center text-sm font-semibold text-blue-700">
                                 {creator.highValueEchoRatio.toFixed(0)}% 
-                            </td>
+                            </td> */}
                             <td className="px-3 py-3 whitespace-nowrap text-center text-md font-extrabold text-green-700">
                                 ${creator.totalEarnings.toFixed(2)}
                             </td>

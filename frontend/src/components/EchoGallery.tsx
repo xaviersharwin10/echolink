@@ -124,38 +124,58 @@ bigint[], string[], string[], `0x${string}`[], bigint[], boolean[]];        // P
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-4xl font-extrabold text-gray-900 mb-2">
-          Knowledge Echo Marketplace
-        </h1>
-        <p className="mt-2 text-lg text-gray-600">
-          Discover and interact with Blockscout-verified, AI-powered Knowledge Echos.
-        </p>
-
-    {/* Loading and Empty States remain the same */}
-    {isScanning && (
-      <div className="text-center py-12">
-        <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-3 border-purple-500"></div>
-          <p className="ml-4 text-gray-600 text-lg">Scanning for Echos on the blockchain..</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-12">
+        {/* Header Section */}
+        <div className="text-center mb-12 animate-fade-in">
+          <h1 className="text-5xl lg:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700 mb-4">
+            Knowledge Echo Marketplace
+          </h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Discover and interact with Blockscout-verified, AI-powered Knowledge Echos from creators worldwide
+          </p>
         </div>
+
+        {/* Loading State */}
+        {isScanning && (
+          <div className="text-center py-20">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-12 shadow-xl max-w-md mx-auto">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-gradient-to-r from-blue-500 to-purple-600 mx-auto mb-6"></div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">Scanning Blockchain</h3>
+              <p className="text-gray-600">Discovering Knowledge Echos...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!isScanning && availableEchos.length === 0 && (
+          <div className="text-center py-20">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-12 shadow-xl max-w-md mx-auto">
+              <div className="text-6xl mb-6">🔮</div>
+              <h3 className="text-2xl font-semibold text-gray-800 mb-4">No Echos Found</h3>
+              <p className="text-gray-600 mb-6">Be the first to create a Knowledge Echo NFT!</p>
+              <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-lg font-semibold">
+                Create Your First Echo
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Echo Grid */}
+        {availableEchos.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {availableEchos.sort((a, b) => b.tokenId - a.tokenId).map((echo, index) => (
+              <div 
+                key={echo.tokenId}
+                className="animate-slide-up"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <EchoCard echo={echo} onSelect={setSelectedTokenId} />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-    )}
-
-    {!isScanning && availableEchos.length === 0 && (
-        <div className="text-center text-gray-500 bg-gray-100 p-10 rounded-xl mt-10 border border-dashed border-gray-300">
-          <h3 className="text-2xl font-semibold text-gray-700">No Echos Found</h3>
-          <p className="mt-3">It looks like there are no Echos minted yet. <br /> Be the first to mint one!</p>
-        </div>
-      )}
-
-      {availableEchos.length > 0 && (
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 py-8">
-          {availableEchos.sort((a, b) => b.tokenId - a.tokenId).map((echo) => (
-            <EchoCard key={echo.tokenId} echo={echo} onSelect={setSelectedTokenId} />
-          ))}
-        </div>
-      )}
     </div>
   );
 };

@@ -138,45 +138,53 @@ export const CreatorStudio: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">🎨 Creator Studio</h2>
-        <p className="text-gray-600">Transform your knowledge into an AI-powered Echo NFT</p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12 animate-fade-in">
+            <h2 className="text-5xl lg:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700 mb-4">
+              🎨 Creator Studio
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Transform your knowledge into an AI-powered Echo NFT and share it with the world
+            </p>
+          </div>
 
-      {/* Progress Indicator */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          {(['upload', 'processing', 'configure', 'minting'] as WizardStep[]).map((stepName, index) => (
-            <div key={stepName} className="flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                step === stepName 
-                  ? 'bg-blue-600 text-white' 
-                  : ['upload', 'processing', 'configure', 'minting'].indexOf(step) > index
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-200 text-gray-600'
-              }`}>
-                {index + 1}
+          {/* Progress Indicator */}
+          <div className="mb-12 animate-fade-in-delay">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
+              <div className="flex items-center justify-between">
+                {(['upload', 'processing', 'configure', 'minting'] as WizardStep[]).map((stepName, index) => (
+                  <div key={stepName} className="flex items-center">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+                      step === stepName 
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-110' 
+                        : ['upload', 'processing', 'configure', 'minting'].indexOf(step) > index
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg'
+                          : 'bg-gray-200 text-gray-600'
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <span className={`ml-3 text-sm font-medium transition-colors duration-300 ${
+                      step === stepName ? 'text-blue-600 font-semibold' : 'text-gray-500'
+                    }`}>
+                      {stepName === 'upload' && 'Upload'}
+                      {stepName === 'processing' && 'Processing'}
+                      {stepName === 'configure' && 'Configure'}
+                      {stepName === 'minting' && 'Mint'}
+                    </span>
+                    {index < 3 && (
+                      <div className={`w-16 h-1 mx-4 rounded-full transition-all duration-300 ${
+                        ['upload', 'processing', 'configure', 'minting'].indexOf(step) > index
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-500'
+                          : 'bg-gray-200'
+                      }`} />
+                    )}
+                  </div>
+                ))}
               </div>
-              <span className={`ml-2 text-sm font-medium ${
-                step === stepName ? 'text-blue-600' : 'text-gray-500'
-              }`}>
-                {stepName === 'upload' && 'Upload'}
-                {stepName === 'processing' && 'Processing'}
-                {stepName === 'configure' && 'Configure'}
-                {stepName === 'minting' && 'Mint'}
-              </span>
-              {index < 3 && (
-                <div className={`w-16 h-0.5 mx-4 ${
-                  ['upload', 'processing', 'configure', 'minting'].indexOf(step) > index
-                    ? 'bg-green-500'
-                    : 'bg-gray-200'
-                }`} />
-              )}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
 
       {/* Error Display */}
       {error && (
@@ -188,8 +196,18 @@ export const CreatorStudio: React.FC = () => {
         </div>
       )}
 
-      {/* Step Content */}
-      <div className="bg-white rounded-lg shadow-lg p-6">
+          {/* Error Display */}
+          {error && (
+            <div className="mb-8 bg-red-50 border border-red-200 rounded-xl p-6 animate-fade-in">
+              <div className="flex items-center">
+                <span className="text-red-500 mr-2">❌</span>
+                <span className="text-red-700 font-medium">{error}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Step Content */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 animate-fade-in-delay-2">
         {step === 'upload' && (
           <div>
             <h3 className="text-xl font-semibold mb-4">📁 Upload Your Knowledge Source</h3>
@@ -354,7 +372,9 @@ export const CreatorStudio: React.FC = () => {
               onMintComplete={handleMintComplete}
             />
           </div>
-        )}
+          )}
+          </div>
+        </div>
       </div>
     </div>
   );

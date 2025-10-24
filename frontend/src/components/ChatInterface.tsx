@@ -441,10 +441,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
   // ✅ Show loading state while fetching echo data
   if (echoDataLoading) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="text-center py-8">
-          <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading Echo data...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center animate-fade-in">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-600 mx-auto mb-6"></div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">Loading Echo Data</h3>
+          <p className="text-gray-600">Fetching information about this Echo...</p>
         </div>
       </div>
     );
@@ -453,195 +454,324 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
   // ✅ Show error state if echo data fetch fails
   if (echoDataError || !creatorAddress) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <p className="text-red-700 font-semibold mb-2">❌ Failed to load Echo data</p>
-          <p className="text-red-600 text-sm">Token ID: {tokenId.toString()}</p>
-          <p className="text-gray-600 text-sm mt-2">This Echo may not exist or there was an error loading it.</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center animate-fade-in">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl max-w-md mx-auto">
+            <div className="text-6xl mb-4">❌</div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">Failed to Load Echo</h3>
+            <p className="text-gray-600 mb-4">Token ID: {tokenId.toString()}</p>
+            <p className="text-sm text-gray-500">This Echo may not exist or there was an error loading it.</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h2 className="text-2xl font-bold mb-4">Chat with Echo #{tokenId.toString()}</h2>
-      {creatorAddress && <EchoAnalytics creatorAddress={creatorAddress} tokenId={tokenId} />}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-6xl mx-auto">
+          {/* Header Section */}
+          <div className="text-center mb-8 animate-fade-in">
+            <h2 className="text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700 mb-4">
+              💬 Chat with Echo #{tokenId.toString()}
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Interact with AI-powered knowledge and explore insights from this Echo
+            </p>
+          </div>
 
-      {/* ✅ Echo Info Display */}
-      <div className="mb-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-        <div className="text-sm space-y-1">
-          <div className="font-semibold text-purple-900">Echo Information</div>
-          <div className="text-purple-700">
-            🎫 Token ID: <span className="font-mono">{tokenId.toString()}</span>
-          </div>
-          <div className="text-purple-700">
-            📝 Name: <span className="font-semibold">{echoName || 'Loading...'}</span>
-          </div>
-          <div className="text-purple-700">
-            👤 Creator: <span className="font-mono text-xs">{creatorAddress ? `${creatorAddress.slice(0, 6)}...${creatorAddress.slice(-4)}` : 'Loading...'}</span>
-          </div>
-          <div className="text-purple-700">
-            💰 Price: <span className="font-semibold">{pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)} PYUSD` : 'Loading...'}</span>
-          </div>
-          <div className="text-purple-600 text-xs">
-            📚 Description: {echoDescription ? `${echoDescription.slice(0, 50)}...` : 'Loading...'}
-          </div>
-          {isActive === false && (
-            <div className="text-red-600 text-xs font-semibold">
-              ⚠️ This Echo is currently inactive
+          {/* Echo Analytics */}
+          {creatorAddress && (
+            <div className="mb-8 animate-fade-in-delay">
+              <EchoAnalytics creatorAddress={creatorAddress} tokenId={tokenId} />
             </div>
           )}
-        </div>
-      </div>
 
-      {/* ✅ Balance Display */}
-      {address && (
-        <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="text-sm space-y-1">
-            <div className="font-semibold text-blue-900">Wallet Info</div>
-            <div className="text-blue-700">
-              💰 PYUSD Balance: <span className="font-mono font-bold">{formatBalance(pyusdBalance as bigint)}</span> PYUSD
-            </div>
-            <div className="text-blue-700">
-              ✅ Allowance: <span className="font-mono">{formatBalance(currentAllowance as bigint)}</span> PYUSD
-            </div>
-            <div className="text-green-700">
-              💳 Credits: <span className="font-mono font-bold">{userCredits && Array.isArray(userCredits) ? userCredits[0].toString() : '0'}</span> credits
-            </div>
-            <div className="text-blue-600 text-xs">
-              📍 {address.slice(0, 6)}...{address.slice(-4)}
+          {/* Echo Info Display */}
+          <div className="mb-8 animate-fade-in-delay">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-200/50">
+              <div className="flex items-center mb-4">
+                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                  🎫
+                </div>
+                <h3 className="text-xl font-semibold text-gray-800">Echo Information</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium text-gray-600 w-20">Name:</span>
+                    <span className="font-semibold text-gray-800">{echoName || 'Loading...'}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium text-gray-600 w-20">Token ID:</span>
+                    <span className="font-mono text-gray-800">{tokenId.toString()}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium text-gray-600 w-20">Price:</span>
+                    <span className="font-semibold text-green-600">{pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)} PYUSD` : 'Loading...'}</span>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-start">
+                    <span className="text-sm font-medium text-gray-600 w-20">Creator:</span>
+                    <span className="font-mono text-xs text-gray-700">{creatorAddress ? `${creatorAddress.slice(0, 6)}...${creatorAddress.slice(-4)}` : 'Loading...'}</span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="text-sm font-medium text-gray-600 w-20">Description:</span>
+                    <span className="text-sm text-gray-700">{echoDescription ? `${echoDescription.slice(0, 60)}...` : 'Loading...'}</span>
+                  </div>
+                  {isActive === false && (
+                    <div className="flex items-center">
+                      <span className="text-sm font-medium text-gray-600 w-20">Status:</span>
+                      <span className="text-red-600 text-sm font-semibold">⚠️ Inactive</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* ✅ Payment Method Selector */}
-      {address && (
-        <div className="mb-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-          <div className="text-sm space-y-2">
-            <div className="font-semibold text-purple-900">Payment Method</div>
-            <div className="flex gap-4">
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="credits"
-                  checked={paymentMethod === 'credits'}
-                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                  className="mr-2"
-                />
-                <span className="text-purple-700">💳 Use Credits</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="microtransaction"
-                  checked={paymentMethod === 'microtransaction'}
-                  onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                  className="mr-2"
-                />
-                <span className="text-purple-700">💰 Direct Payment</span>
-              </label>
+          {/* Balance Display */}
+          {address && (
+            <div className="mb-8 animate-fade-in-delay-2">
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-blue-200/50">
+                <div className="flex items-center mb-4">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                    💰
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-800">Wallet Information</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                    <div className="text-sm text-blue-600 mb-1">PYUSD Balance</div>
+                    <div className="text-xl font-bold text-blue-800">
+                      {formatBalance(pyusdBalance as bigint)} PYUSD
+                    </div>
+                  </div>
+                  <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                    <div className="text-sm text-green-600 mb-1">Credits</div>
+                    <div className="text-xl font-bold text-green-800">
+                      {userCredits && Array.isArray(userCredits) ? userCredits[0].toString() : '0'} Credits
+                    </div>
+                  </div>
+                  <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
+                    <div className="text-sm text-purple-600 mb-1">Allowance</div>
+                    <div className="text-xl font-bold text-purple-800">
+                      {formatBalance(currentAllowance as bigint)} PYUSD
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 text-sm text-gray-600 text-center">
+                  📍 {address.slice(0, 6)}...{address.slice(-4)}
+                </div>
+              </div>
             </div>
-            <div className="text-xs text-purple-600">
-              {paymentMethod === 'credits' 
-                ? `Using ${Math.ceil((pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1) * 100)} credits (${(pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1).toFixed(2)} PYUSD)`
-                : `Direct payment of ${(pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1).toFixed(2)} PYUSD`
-              }
+          )}
+
+          {/* Payment Method Selector */}
+          {address && (
+            <div className="mb-8 animate-fade-in-delay-2">
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-200/50">
+                <div className="flex items-center mb-4">
+                  <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                    💳
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-800">Payment Method</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className={`cursor-pointer p-4 rounded-xl border-2 transition-all duration-300 ${
+                    paymentMethod === 'credits' 
+                      ? 'border-green-500 bg-green-50' 
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="credits"
+                      checked={paymentMethod === 'credits'}
+                      onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                      className="sr-only"
+                    />
+                    <div className="flex items-center">
+                      <div className={`w-6 h-6 rounded-full border-2 mr-3 flex items-center justify-center ${
+                        paymentMethod === 'credits' 
+                          ? 'border-green-500 bg-green-500' 
+                          : 'border-gray-300'
+                      }`}>
+                        {paymentMethod === 'credits' && (
+                          <div className="w-2 h-2 bg-white rounded-full"></div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-800">💳 Use Credits</div>
+                        <div className="text-sm text-gray-600">
+                          {Math.ceil((pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1) * 100)} credits
+                        </div>
+                      </div>
+                    </div>
+                  </label>
+                  
+                  <label className={`cursor-pointer p-4 rounded-xl border-2 transition-all duration-300 ${
+                    paymentMethod === 'microtransaction' 
+                      ? 'border-blue-500 bg-blue-50' 
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="microtransaction"
+                      checked={paymentMethod === 'microtransaction'}
+                      onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
+                      className="sr-only"
+                    />
+                    <div className="flex items-center">
+                      <div className={`w-6 h-6 rounded-full border-2 mr-3 flex items-center justify-center ${
+                        paymentMethod === 'microtransaction' 
+                          ? 'border-blue-500 bg-blue-500' 
+                          : 'border-gray-300'
+                      }`}>
+                        {paymentMethod === 'microtransaction' && (
+                          <div className="w-2 h-2 bg-white rounded-full"></div>
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-800">💰 Direct Payment</div>
+                        <div className="text-sm text-gray-600">
+                          {(pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1).toFixed(2)} PYUSD
+                        </div>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Chat Area */}
+          <div className="mb-8 animate-fade-in-delay-2">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50">
+              <div className="p-6 border-b border-gray-200/50">
+                <h3 className="text-xl font-semibold text-gray-800 flex items-center">
+                  <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                    💬
+                  </div>
+                  Chat with Echo
+                </h3>
+              </div>
+              <div className="p-6 h-96 overflow-y-auto space-y-4">
+                {messages.length === 0 && !isLoading && (
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-4">🤖</div>
+                    <div className="text-gray-500 text-lg mb-2">Start a conversation with this Echo</div>
+                    <div className="text-sm text-gray-400">
+                      Each query costs {pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)}` : '0.1'} PYUSD
+                    </div>
+                  </div>
+                )}
+
+                {messages.map((msg, idx) => (
+                  <div
+                    key={idx}
+                    className={`animate-slide-up ${
+                      msg.role === 'user' 
+                        ? 'ml-auto flex justify-end' 
+                        : 'mr-auto flex justify-start'
+                    }`}
+                    style={{ animationDelay: `${idx * 0.1}s` }}
+                  >
+                    <div
+                      className={`max-w-md p-4 rounded-2xl shadow-sm ${
+                        msg.role === 'user' 
+                          ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white' 
+                          : 'bg-white border border-gray-200'
+                      }`}
+                    >
+                      <div className="font-semibold text-sm mb-2 opacity-80">
+                        {msg.role === 'user' ? 'You' : 'AI Assistant'}
+                      </div>
+                      <div className={msg.role === 'user' ? 'text-white' : 'text-gray-800'}>
+                        {msg.content}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {isLoading && (
+                  <div className="mr-auto flex justify-start animate-pulse">
+                    <div className="bg-white border border-gray-200 max-w-md p-4 rounded-2xl shadow-sm">
+                      <div className="font-semibold text-sm mb-2 text-gray-600">AI Assistant</div>
+                      <div className="text-gray-500 flex items-center gap-2">
+                        <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                        {getStatusMessage()}
+                      </div>
+                      {approveTxHash && (
+                        <div className="text-xs text-gray-400 mt-2">
+                          Approval tx: {approveTxHash.slice(0, 10)}...
+                        </div>
+                      )}
+                      {paymentTxHash && (
+                        <div className="text-xs text-gray-400 mt-2">
+                          Payment tx: {paymentTxHash.slice(0, 10)}...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
 
-      <div className="bg-gray-50 rounded-lg p-4 h-96 overflow-y-auto mb-4 space-y-4">
-        {messages.length === 0 && !isLoading && (
-          <div className="text-gray-400 text-center py-8">
-            Start a conversation by asking a question... (Each query costs {pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)}` : '0.1'} PYUSD)
-          </div>
-        )}
+          {/* Input Form */}
+          <div className="animate-fade-in-delay-2">
+            <form onSubmit={handleSubmit} className="flex gap-4">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask a question..."
+                className="flex-1 px-6 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg shadow-sm"
+                disabled={isLoading || !address}
+              />
+              <button
+                type="submit"
+                disabled={isLoading || !input.trim() || !address}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-8 rounded-2xl font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                {isLoading ? 'Processing...' : 
+                  paymentMethod === 'credits' 
+                    ? `Send (${Math.ceil((pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1) * 100)} credits)`
+                    : `Send (${pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)}` : '0.1'} PYUSD)`
+                }
+              </button>
+            </form>
 
-        {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`${
-              msg.role === 'user' 
-                ? 'bg-blue-100 ml-auto text-right' 
-                : 'bg-white mr-auto'
-            } max-w-md p-3 rounded-lg shadow-sm`}
-          >
-            <div className="font-semibold text-sm mb-1">
-              {msg.role === 'user' ? 'You' : 'AI Assistant'}
-            </div>
-            <div className="text-gray-800">{msg.content}</div>
-          </div>
-        ))}
-
-        {isLoading && (
-          <div className="bg-white mr-auto max-w-md p-3 rounded-lg shadow-sm">
-            <div className="font-semibold text-sm mb-1">AI Assistant</div>
-            <div className="text-gray-500 flex items-center gap-2">
-              <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-              {getStatusMessage()}
-            </div>
-            {approveTxHash && (
-              <div className="text-xs text-gray-400 mt-1">
-                Approval tx: {approveTxHash.slice(0, 10)}...
+            {!address && (
+              <div className="mt-4 text-center">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                  <p className="text-yellow-700 font-medium">🔗 Please connect your wallet to start chatting</p>
+                </div>
               </div>
             )}
-            {paymentTxHash && (
-              <div className="text-xs text-gray-400 mt-1">
-                Payment tx: {paymentTxHash.slice(0, 10)}...
-              </div>
-            )}
           </div>
-        )}
+
+          {/* Debug info */}
+          {/* {process.env.NODE_ENV === 'development' && (
+            <div className="mt-8 p-4 bg-gray-100 rounded-xl text-xs font-mono animate-fade-in-delay-2">
+              <div>Token ID: {tokenId.toString()}</div>
+              <div>Creator: {creatorAddress}</div>
+              <div>Payment Method: {paymentMethod}</div>
+              <div>Payment Step: {paymentStep}</div>
+              <div>Approve Pending: {isApprovePending ? 'Yes' : 'No'}</div>
+              <div>Payment Pending: {isPaymentPending ? 'Yes' : 'No'}</div>
+              <div>Credit Pending: {isCreditPending ? 'Yes' : 'No'}</div>
+              <div>Balance: {pyusdBalance?.toString() || 'N/A'} (raw units)</div>
+              <div>Allowance: {currentAllowance?.toString() || 'N/A'} (raw units)</div>
+              <div>Credits: {userCredits && Array.isArray(userCredits) ? userCredits[0].toString() : 'N/A'}</div>
+            </div>
+          )} */}
+        </div>
       </div>
-
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask a question..."
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          disabled={isLoading || !address}
-        />
-        <button
-          type="submit"
-          disabled={isLoading || !input.trim() || !address}
-          className="bg-blue-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200"
-        >
-          {isLoading ? 'Processing...' : 
-            paymentMethod === 'credits' 
-              ? `Send (${Math.ceil((pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1) * 100)} credits)`
-              : `Send (${pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)}` : '0.1'} PYUSD)`
-          }
-        </button>
-      </form>
-
-      {!address && (
-        <div className="text-center text-red-500 mt-2">
-          Please connect your wallet to chat.
-        </div>
-      )}
-
-      {/* Debug info */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mt-4 p-2 bg-gray-100 rounded text-xs font-mono">
-          <div>Token ID: {tokenId.toString()}</div>
-          <div>Creator: {creatorAddress}</div>
-          <div>Payment Method: {paymentMethod}</div>
-          <div>Payment Step: {paymentStep}</div>
-          <div>Approve Pending: {isApprovePending ? 'Yes' : 'No'}</div>
-          <div>Payment Pending: {isPaymentPending ? 'Yes' : 'No'}</div>
-          <div>Credit Pending: {isCreditPending ? 'Yes' : 'No'}</div>
-          <div>Balance: {pyusdBalance?.toString() || 'N/A'} (raw units)</div>
-          <div>Allowance: {currentAllowance?.toString() || 'N/A'} (raw units)</div>
-          <div>Credits: {userCredits && Array.isArray(userCredits) ? userCredits[0].toString() : 'N/A'}</div>
-        </div>
-      )}
     </div>
   );
 };

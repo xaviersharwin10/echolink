@@ -1,6 +1,6 @@
 // Contract configuration
 // Update this address after deploying your contract
-export const ECHOLNK_NFT_ADDRESS = "0x7f10Df09c2d91C8C6A8B8e1ECeAD336eE39C3c9f" as `0x${string}`;
+export const ECHOLNK_NFT_ADDRESS = "0x287b5a9EB0cAbDBD1860BCEF5f847C2958129FF4" as `0x${string}`;
 export const QUERY_PAYMENTS_ADDRESS = "0xFf08e351Bf16fE0703108cf9B4AeDe3a16fd0a46" as `0x${string}`;
 
 export const ECHO_NFT_ABI = [

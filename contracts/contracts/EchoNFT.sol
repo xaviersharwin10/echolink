@@ -49,9 +49,8 @@ contract EchoNFT is ERC721, Ownable {
     }
 
     /**
-     * @dev Mints a new Echo NFT with a specific token ID. Can only be called by the contract owner.
-     * The owner will be our backend server, ensuring Echos are only created
-     * through our official process. This is a key security feature.
+     * @dev Mints a new Echo NFT with a specific token ID. Can be called by anyone.
+     * This allows users to create Echo NFTs directly from the frontend.
      */
     function safeMint(
         uint256 tokenId,
@@ -61,7 +60,6 @@ contract EchoNFT is ERC721, Ownable {
         uint256 pricePerQuery
     )
         public
-        onlyOwner // This ensures only our backend can call this
         returns (uint256)
     {
         require(!_usedTokenIds[tokenId], "Token ID already exists");

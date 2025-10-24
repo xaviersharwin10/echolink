@@ -9,14 +9,16 @@ const BLOCKSCOUT_API_BASE = 'https://eth-sepolia.blockscout.com/api';
 const PYUSD_DECIMALS = 6;
 const PYUSD_TOKEN_ADDRESS = '0xCaC524BcA292aaade2df8a05cC58F0a65B1B3bB9'; 
 const PYUSD_RATE_PER_CREDIT = 0.01;
-const PROTOCOL_FEE_PERCENT = 0.05; // 5% fee
+const PROTOCOL_FEE_PERCENT = 0.05; 
 
 // Price Tiers for Visualization
 const PRICE_TIERS = [
     { label: "$0.00 - $0.10", max: 0.10, count: 0, color: 'bg-green-100' },
     { label: "$0.11 - $0.50", max: 0.50, count: 0, color: 'bg-yellow-100' },
-    { label: "$0.51+", max: Infinity, count: 0, color: 'bg-red-100' },
+    { label: "$0.51+", max: Infinity, count: 0, color: 'bg-red-100' }
 ];
+
+const HIGH_VALUE_THRESHOLD = 0.10; // $0.50 PYUSD
 
 // --- Interfaces ---
 interface EchoStats {
@@ -32,15 +34,17 @@ interface CreatorStats {
     totalEchos: number;
     totalEarnings: number;
     topEchoId: number | null;
+    totalWalletTxs: number; // Total general transactions by this address
+    highValueEchoRatio: number; // % of Echos priced >= $0.50
 }
 interface LogEvent {
     address: string;
     topics: string[];
-    data: string; // Hex string of non-indexed data
+    data: string; 
     transactionHash: string;
-    timeStamp: string; // FIX: Added timeStamp property
+    timeStamp: string; 
 }
-// FIX: Added 'max' property to PriceTierData interface
+
 interface PriceTierData {
     label: string;
     count: number;
@@ -50,22 +54,15 @@ interface PriceTierData {
 
 // --- Helper Functions ---
 
-/**
- * Safely converts a padded 32-byte hex topic string (uint256) into a safe JavaScript number (integer).
- * This is the fix for the scientific notation error.
- */
+
 const safeParseTokenId = (hexTopic: string): number => {
     try {
-        // Find the index where the non-zero digits start (after '0x' and leading zeros)
         const nonZeroIndex = hexTopic.slice(2).search(/[^0]/);
         
-        if (nonZeroIndex === -1) return 0; // Topic is all zeros
+        if (nonZeroIndex === -1) return 0; 
         
-        // Extract the non-padded portion, or fallback to the whole string if short
         const cleanHex = '0x' + hexTopic.slice(2 + nonZeroIndex);
         
-        // Use BigInt for the large hex, then convert to Number for small IDs
-        // This avoids corruption that happens when parsing the fully padded string
         return Number(BigInt(cleanHex));
     } catch (e) {
         console.error("Failed to safely parse Token ID:", hexTopic, e);
@@ -73,26 +70,21 @@ const safeParseTokenId = (hexTopic: string): number => {
     }
 };
 
-/**
- * Generates a color based on the Token ID for visual distinction in charts.
- */
 const generateBarColor = (tokenId: number): string => {
     const hue = (tokenId * 137) % 360;
-    return `hsl(${hue}, 60%, 55%)`; // A distinct, readable color
+    return `hsl(${hue}, 60%, 55%)`; 
 };
 
 
-// --- Component ---
+
 export const EchoLeaderboard: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<EchoStats[]>([]);
   const [creatorLeaderboard, setCreatorLeaderboard] = useState<CreatorStats[]>([]);
   const [totalMarketValue, setTotalMarketValue] = useState<number>(0);
   const [totalEchosCount, setTotalEchosCount] = useState<number>(0); 
-  const [totalQueriesProcessed, setTotalQueriesProcessed] = useState<number>(0); // NEW STATE for total queries
-  const [activeEchosLast7D, setActiveEchosLast7D] = useState<number>(0); // NEW STATE for activity
-  const [priceDistribution, setPriceDistribution] = useState<PriceTierData[]>([]); // NEW STATE for distribution
-  
-  // NEW STATES for financial metrics
+  const [totalQueriesProcessed, setTotalQueriesProcessed] = useState<number>(0);
+  const [activeEchosLast7D, setActiveEchosLast7D] = useState<number>(0);
+  const [priceDistribution, setPriceDistribution] = useState<PriceTierData[]>([]);
   const [totalProtocolFees, setTotalProtocolFees] = useState<number>(0);
   const [averageRevenuePerEcho, setAverageRevenuePerEcho] = useState<number>(0);
 
@@ -117,19 +109,33 @@ export const EchoLeaderboard: React.FC = () => {
       // Initialize price distribution calculation
       const currentPriceDistribution: PriceTierData[] = JSON.parse(JSON.stringify(PRICE_TIERS)); // Deep copy
 
+      // Track Echos per creator and their price status for the new metric
+      const creatorPriceTracker = new Map<string, { total: number; highValue: number }>();
+
       tokenIds.forEach((id, i) => {
         const tokenIdNumber = Number(id);
         const price = Number(pricesPerQuery[i]) / (10 ** PYUSD_DECIMALS);
+        const creatorAddress = creators[i];
 
         echoMetadataMap.set(tokenIdNumber, {
           name: names[i],
-          creator: creators[i],
+          creator: creatorAddress,
           price: price,
         });
 
         // Price Distribution Aggregation
         const tier = currentPriceDistribution.find(t => price <= t.max) || currentPriceDistribution[currentPriceDistribution.length - 1];
         tier.count++;
+
+        // Creator Price Tracker Logic
+        if (!creatorPriceTracker.has(creatorAddress)) {
+            creatorPriceTracker.set(creatorAddress, { total: 0, highValue: 0 });
+        }
+        const tracker = creatorPriceTracker.get(creatorAddress)!;
+        tracker.total++;
+        if (price >= HIGH_VALUE_THRESHOLD) {
+            tracker.highValue++;
+        }
       });
       
       const mintedCount = echoMetadataMap.size;
@@ -141,7 +147,7 @@ export const EchoLeaderboard: React.FC = () => {
       // --- Step 2: Define and Fetch Events from Blockscout ---
       
       const queryPaidTopic = '0xad43474671daf07280e68edd7b27b2f40c4c24ea677afd418a3a407fa27f4058'; 
-      const creditsUsedTopic = '0x530c3167195b45c3635391c530663152a488a071f1e737194e9f758417c800c1'; 
+      const creditsUsedTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'; 
 
       const paymentEvents = await axios.all([
         axios.get(`${BLOCKSCOUT_API_BASE}`, { params: { module: 'logs', action: 'getLogs', address: QUERY_PAYMENTS_ADDRESS, topic0: queryPaidTopic, fromBlock: 0, toBlock: 'latest', }}),
@@ -187,8 +193,6 @@ export const EchoLeaderboard: React.FC = () => {
         
         grossMarketValue += amountPYUSD;
         totalQueries += 1;
-        
-        // Activity Tracking (FIX: timeStamp property is now correctly typed)
         const timestamp = parseInt(log.timeStamp, 16);
         if (timestamp > oneWeekAgo) {
             activeEchos.add(tokenId);
@@ -214,8 +218,6 @@ export const EchoLeaderboard: React.FC = () => {
         const pyusdValue = creditsUsed * PYUSD_RATE_PER_CREDIT;
         grossMarketValue += pyusdValue; 
         totalQueries += 1;
-
-        // Activity Tracking (FIX: timeStamp property is now correctly typed)
         const timestamp = parseInt(log.timeStamp, 16);
         if (timestamp > oneWeekAgo) {
             activeEchos.add(tokenId);
@@ -243,21 +245,27 @@ export const EchoLeaderboard: React.FC = () => {
       setTotalMarketValue(grossMarketValue);
       setTotalQueriesProcessed(totalQueries);
       setActiveEchosLast7D(activeEchos.size); 
-      setTotalProtocolFees(fees); // NEW STAT
-      setAverageRevenuePerEcho(arpe); // NEW STAT
+      setTotalProtocolFees(fees);
+      setAverageRevenuePerEcho(arpe);
 
-      // --- Step 6: Create Creator Leaderboard ---
+      // --- Step 6: Create Creator Leaderboard and fetch Tx Data ---
       const creatorMap = new Map<string, CreatorStats>();
       
       finalLeaderboard.forEach(echo => {
           const creatorAddress = echo.creator;
 
           if (!creatorMap.has(creatorAddress)) {
+              // Initialize with calculated High Value Ratio
+              const tracker = creatorPriceTracker.get(creatorAddress) || { total: 0, highValue: 0 };
+              const ratio = tracker.total > 0 ? (tracker.highValue / tracker.total) * 100 : 0;
+
               creatorMap.set(creatorAddress, {
                   address: creatorAddress,
                   totalEchos: 0,
                   totalEarnings: 0,
                   topEchoId: null,
+                  totalWalletTxs: 0, 
+                  highValueEchoRatio: ratio, // Store the calculated ratio
               });
           }
           const creatorEntry = creatorMap.get(creatorAddress)!;
@@ -272,7 +280,42 @@ export const EchoLeaderboard: React.FC = () => {
       const finalCreatorLeaderboard = Array.from(creatorMap.values())
         .sort((a, b) => b.totalEarnings - a.totalEarnings);
       
-      setCreatorLeaderboard(finalCreatorLeaderboard);
+      // --- Step 7: Fetch Transaction Count for Top 5 Creators ---
+      console.log("-> Starting Blockscout TX list fetch for top 5 creators...");
+      const txPromises = finalCreatorLeaderboard.slice(0, 5).map(creator => {
+          console.log(`-> Fetching TX count for creator: ${creator.address.slice(0, 10)}...`);
+          return axios.get(`${BLOCKSCOUT_API_BASE}`, { params: {
+              module: 'account',
+              action: 'txlist',
+              address: creator.address,
+              startblock: 0,
+              endblock: 99999999,
+          }}).then(response => {
+              const result = response.data.result;
+              const txCount = Array.isArray(result) ? result.length : 0;
+              console.log(`-> SUCCESS: Fetched ${txCount} TXs for ${creator.address.slice(0, 10)}...`);
+              return { address: creator.address, txCount: txCount };
+          }).catch((e) => {
+              console.error(`-> FAIL: TX count fetch error for ${creator.address.slice(0, 10)}: ${e.message}`);
+              return { address: creator.address, txCount: 0 }; 
+          });
+      });
+
+      const txResults = await axios.all(txPromises);
+      
+      // Update the final creator leaderboard with wallet Tx data
+      const updatedCreatorLeaderboard = finalCreatorLeaderboard.map(creator => {
+          const txData = txResults.find(t => t.address === creator.address);
+          
+          const txCount = txData?.txCount ?? 0;
+
+          return {
+              ...creator,
+              totalWalletTxs: txCount,
+          };
+      });
+      
+      setCreatorLeaderboard(updatedCreatorLeaderboard);
       
     } catch (err) {
       console.error("Blockscout Leaderboard Fetch Error:", err);
@@ -388,8 +431,10 @@ export const EchoLeaderboard: React.FC = () => {
                 <thead className="bg-gray-50">
                     <tr>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                        <th className-="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Creator Address</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Creator Address</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Echos</th>
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">TXs</th> 
+                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Quality</th> 
                         <th className="px-3 py-2 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Earnings</th>
                     </tr>
                 </thead>
@@ -404,6 +449,12 @@ export const EchoLeaderboard: React.FC = () => {
                             </td>
                             <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-purple-700 font-semibold">
                                 {creator.totalEchos}
+                            </td>
+                            <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-700 font-semibold">
+                                {creator.totalWalletTxs.toLocaleString()} 
+                            </td>
+                            <td className="px-3 py-3 whitespace-nowrap text-center text-sm font-semibold text-blue-700">
+                                {creator.highValueEchoRatio.toFixed(0)}% 
                             </td>
                             <td className="px-3 py-3 whitespace-nowrap text-center text-md font-extrabold text-green-700">
                                 ${creator.totalEarnings.toFixed(2)}
@@ -513,9 +564,8 @@ export const EchoLeaderboard: React.FC = () => {
       </div>
 
       {isLoading ? renderLeaderboardTable() : (
-        <div className="grid grid-cols-1 gap-6"> {/* Unified 1-column grid */}
+        <div className="grid grid-cols-1 gap-6">
             
-            {/* Row 1: Charts (2 columns) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {priceDistribution.length > 0 && renderPriceDistribution()}
                 {leaderboard.length > 0 && renderTopEchosChart()}

@@ -15,14 +15,12 @@ const PORT = 3001;
 const MCP_API_BASE_URL = 'http://127.0.0.1:8003/v1'; 
 
 // --- LLM SETUP ---
-// if (!process.env.OPENROUTER_API_KEY) {
-//   throw new Error("Please set OPENROUTER_API_KEY in your .env file");
-// }
+// Using ASI:One LLM instead of OpenRouter
 const llm = new ChatOpenAI({
-  model: "openai/gpt-4o",
+  model: "asi1-mini",
   apiKey: "",
   configuration: {
-    baseURL: "https://openrouter.ai/api/v1",
+    baseURL: "https://api.asi1.ai/v1",
     defaultHeaders: { "X-Title": "EchoLink Protocol" }
   },
 });

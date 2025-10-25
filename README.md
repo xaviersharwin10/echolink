@@ -1,6 +1,27 @@
-# EchoLink - Decentralized Knowledge Marketplace 🌐🧠
+<div align="center">
+  <h1>EchoLink - Decentralized Knowledge Marketplace 🌐🧠</h1>
+  <p>Mint your content (books, papers) as <b>AI Echo NFTs</b> powered by <b>ASI uAgents</b> and <b>MeTTa graphs</b>. Earn <b>PYUSD</b> micro-payments directly from users who query your Echo for verifiable insights, with all usage transparently tracked on <b>Blockscout</b>.
+  <p>Built for <b>ETHOnline 2025</b>.</p>
+</div>
 
-**EchoLink** - Decentralized Knowledge Marketplace. Mint your content (books, papers) as AI Echo NFTs powered by ASI uAgents and MeTTa graphs. Earn PYUSD micro-payments directly from users who query your Echo for verifiable insights, with all usage transparently tracked on Blockscout. Built for **ETHOnline 2025**.
+<br>
+
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-blue)
+![React.js](https://img.shields.io/badge/Frontend-React.js_19-black)
+![TypeScript](https://img.shields.io/badge/Language-TypeScript_5.0-blue)
+![Python](https://img.shields.io/badge/Language-Python/Whisper-yellowgreen)
+![AI Agents](https://img.shields.io/badge/AI_Agents-ASI_uAgents-green)
+![Blockscout](https://img.shields.io/badge/Analytics-Blockscout_MCP-purple)
+![Monetization](https://img.shields.io/badge/Monetization-PYUSD-informational)
+![Smart Contracts](https://img.shields.io/badge/Contracts-Solidity-orange)
+![EVM](https://img.shields.io/badge/Blockchain-EVM-blueviolet)
+![Web3.py](https://img.shields.io/badge/Web3_Client-Web3.py-darkblue)
+![Data Layer](https://img.shields.io/badge/Knowledge_Graph-MeTTa_Graphs-lightgray)
+![Vector DB](https://img.shields.io/badge/Vector_DB-FAISS_Indexer-blue)
+![NLP](https://img.shields.io/badge/NLP_Extraction-REBEL_Model-red)
+
+---
 
 ## 🌟 Overview
 

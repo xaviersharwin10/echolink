@@ -14,7 +14,10 @@ The platform delivers a scalable real-world solution for knowledge monetization,
 - **Multi-Agent Architecture**: Three specialized agents (Orchestrator, Payment, Knowledge) working in concert to deliver seamless query processing
 - **MeTTa Knowledge Graphs**: Advanced structured reasoning with entity-relation-value triples enables deep semantic understanding
 - **ASI:One Integration**: Natural human-agent interaction through Web3-native language model synthesis
-- **Agentverse Deployment**: All agents registered and discoverable on Agentverse for seamless integration
+- **Agentverse Deployment**: All agents registered and discoverable on Agentverse:
+  - [Orchestrator Agent](https://agentverse.ai/agents/details/agent1qwvu2g779cjyna0dzcs2klw6w2s6v323xkqguypzj05vdk0xrdc3wkjp3wq/profile) - Routes queries and coordinates workflows
+  - [Payment Agent](https://agentverse.ai/agents/details/agent1qgmcaux67tuhrkl9cwhns0npxclvksy66yarp32j4f8zkedrhqjys597p08/profile) - Validates blockchain transactions
+  - [Knowledge Agent](https://agentverse.ai/agents/details/agent1q2x577ul5d6r20c4alcx64pcersrusm7j4pekkce05cu22kpxz9hux72t3t/profile) - Processes queries using MeTTa reasoning
 - **Chat Protocol**: Direct conversational interface enabling users to interact with AI agents naturally
 
 **💳 PayPal PYUSD Payment System**

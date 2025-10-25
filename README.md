@@ -98,6 +98,7 @@ EchoLink provides comprehensive blockchain analytics powered by Blockscout:
 - **MCP Chatbot**: Intelligent AI analyst powered by Blockscout Model Context Protocol
 - **Natural Language Queries**: Ask questions like "What's the highest performing Echo?" and get AI-reasoned answers
 - **On-Chain Intelligence**: Uses MCP tools (read_contract, get_address_info, get_token_transfers) for comprehensive blockchain analysis
+- **Trustless Ledger:** Creator earnings (net PYUSD received) and query volume are calculated using event logs (`QueryPaid`, `CreditsUsed`, `EchoPurchased`) instead of centralized metrics.
 
 **Leaderboard Analytics**
 - **Real-Time Rankings**: Dynamic leaderboard showing top-performing Echos and creators based on on-chain data
@@ -114,6 +115,14 @@ EchoLink provides comprehensive blockchain analytics powered by Blockscout:
 - **Open Source**: Fully composable with other Web3 primitives
 - **Multi-Chain Ready**: MCP server provides unified interface across blockchain networks
 - **Production-Ready**: Enterprise-grade analytics for monitoring and optimization
+
+## End-to-End Value Proposition
+
+| User Persona | Action | Resulting Value |
+| :--- | :--- | :--- |
+| **The Creator (Alex)** | Mints Echo NFT from 10 hours of content. | **Scalable, Passive Income:** Earns micro-payments ($0.20 PYUSD/query) from existing knowledge while sleeping. |
+| **The User (Bob)** | Asks a complex, multi-source query. | **On-Demand Expert:** Gets precise, synthesized answers grounded in the creator's entire corpus (MeTTa-verified), giving a competitive advantage. |
+| **The Protocol** | Facilitates micro-payments and transparency. | **Sustainable Economy:** Transparent 5% fee supports the platform, with all transactions verifiable via Blockscout. |
 
 ## 🏗️ Architecture
 
@@ -153,7 +162,7 @@ EchoLink provides comprehensive blockchain analytics powered by Blockscout:
 ### Multi-Agent Architecture (ASI Alliance Integration)
 
 ```
-                    [User via ASI:One Chat Protocol]
+              [User via ASI:One Chat Protocol]
                               ↓
                     [EchoLink Frontend]
                               ↓
@@ -568,6 +577,24 @@ EchoLink will continue evolving with cutting-edge features:
 - **Team Collaboration**: Shared workspace for teams to collaborate on Echo creation
 - **API Access**: Developer APIs for custom integrations and automations
 - **Advanced Access Control**: Granular permissions and enterprise-level security
+
+## 🏆 Hackathon Submission Details
+
+*   **Project Name:** Echolink
+    
+*   **Submission Date:** 26-10-2025
+    
+*   **Team Members:** [@sharwin](https://github.com/xaviersharwin10), [@raksha](https://github.com/Raksha001)
+
+*   **Demo Link:** [Demo]()
+    
+*   **Pitch Deck Link:** [Pitch Deck]()
+    
+*   **Contract Deployed Address [ECHOLINK NFT]:** **[0x39bc7190911b9334560ADfEf4100f1bE515fa3e1](https://eth-sepolia.blockscout.com/address/0x39bc7190911b9334560ADfEf4100f1bE515fa3e1)**
+    
+*   **Contract Deployed Address [QUERY PAYMENTS]:** [0xFf08e351Bf16fE0703108cf9B4AeDe3a16fd0a46](https://eth-sepolia.blockscout.com/address/0xFf08e351Bf16fE0703108cf9B4AeDe3a16fd0a46)
+
+*   **PYUSD Ethereum Sepolia Testnet [Token Address]:** 0xCaC524BcA292aaade2df8a05cC58F0a65B1B3bB9
 
 ## 🎉 Acknowledgments
 

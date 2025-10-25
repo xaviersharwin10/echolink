@@ -191,7 +191,7 @@ Fetch.ai Almanac: Secure agent-to-agent messaging
 - **Node.js** (v18 or higher)
 - **Python** (v3.9 or higher)
 - **MetaMask** or compatible Web3 wallet
-- **Base Sepolia** testnet connection
+- **Ethereum Sepolia** testnet connection
 - **PYUSD** tokens (testnet)
 
 ### Installation
@@ -318,6 +318,32 @@ Update the relevant api keys in knowledge_agent.py, intelligent_agent.py, multia
 2. View your current credit balance
 3. Buy credits with PYUSD (1 PYUSD = 100 credits)
 4. Use credits to query paid Echos
+
+### For Users: Viewing Analytics & Leaderboard
+
+1. Navigate to **"🏆 Leaderboard"** tab
+2. View real-time rankings of top-performing Echos based on query volume
+3. Check creator leaderboard showing total earnings and Echo count
+4. Explore market metrics:
+   - Total market value transacted
+   - Protocol fees collected
+   - Active Echos (7-day window)
+   - Average revenue per Echo
+5. View price distribution visualization showing knowledge pricing tiers
+6. See top 5 Echos by query volume with interactive charts
+
+### For Users: AI Analyst Chatbot (Blockscout MCP)
+
+1. Click the floating AI button (bottom-right corner)
+2. The **AI Analyst** chatbot powered by Blockscout MCP opens
+3. Ask natural language questions about blockchain data:
+   - "What's the highest performing Echo?"
+   - "Show me all Echos created by address 0x..."
+   - "What's the total value of transactions on the platform?"
+   - "Which creator has the most earnings?"
+4. Get AI-reasoned answers with on-chain data insights
+5. View transaction logs, contract calls, and address information
+6. The AI uses Blockscout MCP tools (read_contract, get_address_info, get_token_transfers) for comprehensive analysis
 
 ## 🛠️ Technologies Used
 

@@ -114,7 +114,7 @@ export const CreditManager: React.FC = () => {
     // Check if we need to approve first
     if (!currentAllowance || (currentAllowance as bigint) < requiredAllowance) {
       try {
-        console.log('🔐 Approving PYUSD for credit purchase...');
+        console.log('🔐 Step 1: Approving PYUSD for credit purchase...');
         console.log('💰 Required allowance:', requiredAllowance.toString());
         console.log('💰 Current allowance:', currentAllowance?.toString() || '0');
         
@@ -126,69 +126,9 @@ export const CreditManager: React.FC = () => {
         console.log('✅ Approval transaction sent:', approveTx.hash);
         openTxToast(chainId.toString(), approveTx.hash);
         
-        // Wait for approval confirmation
-        console.log('⏳ Waiting for approval confirmation...');
+        // Don't wait here - let useEffect handle the purchase after approval
+        return;
         
-        // Wait for the approval transaction to be confirmed
-        let approvalConfirmed = false;
-        let attempts = 0;
-        const maxAttempts = 30; // 30 seconds max wait
-        
-        while (!approvalConfirmed && attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-          attempts++;
-          
-          // Check if approval was successful
-          if (isApproveSuccess) {
-            approvalConfirmed = true;
-            console.log('✅ Approval transaction confirmed');
-            break;
-          }
-          
-          // Refetch allowance to check if it was updated
-          await refetchAllowance();
-        }
-        
-        setIsApproving(false);
-        
-        if (!approvalConfirmed) {
-          console.error('❌ Approval confirmation timeout');
-          alert('Approval is taking too long. Please check your wallet and try again.');
-          return;
-        }
-        
-        console.log('✅ Approval confirmed, proceeding with purchase');
-        
-        // Now proceed with the purchase transaction immediately
-        try {
-          console.log('💳 Purchasing credits...');
-          console.log('💰 Amount:', amount.toString());
-          setIsPurchasing(true);
-          
-          const purchaseTx = await purchaseCredits({
-            args: [amount],
-          });
-          console.log('✅ Purchase transaction sent:', purchaseTx.hash);
-          openTxToast(chainId.toString(), purchaseTx.hash);
-          
-        } catch (error) {
-          console.error('❌ Credit purchase failed:', error);
-          setIsPurchasing(false);
-          
-          // Provide more detailed error information
-          if (error instanceof Error) {
-            if (error.message.includes('insufficient')) {
-              alert('Insufficient PYUSD balance. Please check your balance and try again.');
-            } else if (error.message.includes('allowance')) {
-              alert('Insufficient allowance. Please approve more PYUSD and try again.');
-            } else {
-              alert(`Credit purchase failed: ${error.message}`);
-            }
-          } else {
-            alert('Credit purchase failed. Please check your wallet and try again.');
-          }
-          return;
-        }
       } catch (error) {
         console.error('❌ Approval failed:', error);
         setIsApproving(false);
@@ -228,6 +168,36 @@ export const CreditManager: React.FC = () => {
       }
     }
   };
+
+  // Handle successful approval - proceed with purchase
+  React.useEffect(() => {
+    const executePurchase = async () => {
+      if (isApproveSuccess && isApproving) {
+        console.log('✅ Approval confirmed on-chain');
+        setIsApproving(false);
+
+        await refetchAllowance();
+
+        try {
+          console.log('💳 Step 2: Purchasing credits...');
+          const amount = parseUnits(purchaseAmount, PYUSD_DECIMALS);
+          setIsPurchasing(true);
+          
+          const purchaseTx = await purchaseCredits({
+            args: [amount],
+          });
+          console.log('✅ Purchase transaction sent:', purchaseTx.hash);
+          openTxToast(chainId.toString(), purchaseTx.hash);
+        } catch (error: any) {
+          console.error('❌ Credit purchase failed:', error);
+          setIsPurchasing(false);
+          alert(`Credit purchase failed: ${error.message || 'Unknown error'}`);
+        }
+      }
+    };
+
+    executePurchase();
+  }, [isApproveSuccess, isApproving, purchaseAmount, refetchAllowance, purchaseCredits, openTxToast, chainId]);
 
   // Handle successful purchase
   React.useEffect(() => {

@@ -53,9 +53,11 @@ type PaymentMethod = 'microtransaction' | 'credits';
 
 interface ChatInterfaceProps {
   tokenId: bigint; // ✅ Accept tokenId as prop
+  isOwned?: boolean; // ✅ Whether user owns this Echo (unlimited access)
+  onBack?: () => void; // ✅ Optional back button
 }
 
-export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
+export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId, isOwned = false, onBack }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -81,8 +83,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
   });
 
   // ✅ Extract Echo data from the struct
-  // echoData returns a tuple: [name: string, description: string, creator: address, pricePerQuery: uint256, isActive: bool]
-  const [echoName, echoDescription, creatorAddress, pricePerQuery, isActive] = (echoData as [string, string, string, bigint, boolean]) || [undefined, undefined, undefined, undefined, undefined];
+  // echoData returns a tuple: [name: string, description: string, creator: address, pricePerQuery: uint256, isActive: bool, purchasePrice: uint256, isForSale: bool, owner: address]
+  const [echoName, echoDescription, creatorAddress, pricePerQuery, isActive, purchasePrice, isForSale, owner] = (echoData as unknown as [string, string, string, bigint, boolean, bigint, boolean, string]) || [undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
   console.log('🔍 Echo data:', { echoName, echoDescription, creatorAddress, pricePerQuery, isActive });
 
   // ✅ Read PYUSD balance
@@ -352,6 +354,45 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
     setInput('');
     setIsLoading(true);
 
+    // ✅ Skip payment for owned Echos
+    if (isOwned) {
+      console.log('👑 User owns this Echo - skipping payment');
+      try {
+        const response = await fetch('http://localhost:3001/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            query: input,
+            token_id: tokenId.toString(),
+            user_address: address,
+            use_credits: false, // No payment needed for owned Echos
+            is_owned: true, // Flag for backend
+          }),
+        });
+
+        console.log('✅ Backend responded:', response.status);
+        const data = await response.json();
+        console.log('📦 AI response data:', data);
+
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: data.answer || 'Sorry, I could not process your request.',
+          },
+        ]);
+      } catch (error) {
+        console.error('❌ Error querying backend:', error);
+        setMessages(prev => [
+          ...prev,
+          { role: 'assistant', content: 'Error: Could not connect to the backend.' },
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     const queryCost = pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1; // Convert from wei to PYUSD
     const requiredCredits = Math.ceil(queryCost * 100); // 1 PYUSD = 100 credits
 
@@ -371,7 +412,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
         setPaymentStep('using_credits');
         
         const creditTx = await executeCreditsForQuery({
-          args: [address, tokenId, BigInt(requiredCredits)],
+          args: [tokenId, BigInt(requiredCredits)],
         });
         
         console.log('✅ Credit transaction sent:', creditTx.hash);
@@ -570,8 +611,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
             </div>
           )}
 
-          {/* Payment Method Selector */}
-          {address && (
+          {/* Payment Method Selector - Only show for non-owned Echos */}
+          {address && !isOwned && (
             <div className="mb-8 animate-fade-in-delay-2">
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-200/50">
                 <div className="flex items-center mb-4">
@@ -653,20 +694,39 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
           <div className="mb-8 animate-fade-in-delay-2">
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50">
               <div className="p-6 border-b border-gray-200/50">
-                <h3 className="text-xl font-semibold text-gray-800 flex items-center">
-                  <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
-                    💬
-                  </div>
-                  Chat with Echo
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold text-gray-800 flex items-center">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold mr-3 ${
+                      isOwned 
+                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500' 
+                        : 'bg-gradient-to-r from-green-500 to-emerald-500'
+                    }`}>
+                      {isOwned ? '👑' : '💬'}
+                    </div>
+                    {isOwned ? 'Your Echo (Unlimited Access)' : 'Chat with Echo'}
+                  </h3>
+                  {onBack && (
+                    <button
+                      onClick={onBack}
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 flex items-center gap-2"
+                    >
+                      ← Back
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="p-6 h-96 overflow-y-auto space-y-4">
                 {messages.length === 0 && !isLoading && (
                   <div className="text-center py-12">
-                    <div className="text-6xl mb-4">🤖</div>
-                    <div className="text-gray-500 text-lg mb-2">Start a conversation with this Echo</div>
+                    <div className="text-6xl mb-4">{isOwned ? '👑' : '🤖'}</div>
+                    <div className="text-gray-500 text-lg mb-2">
+                      {isOwned ? 'Start a conversation with your Echo' : 'Start a conversation with this Echo'}
+                    </div>
                     <div className="text-sm text-gray-400">
-                      Each query costs {pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)}` : '0.1'} PYUSD
+                      {isOwned 
+                        ? 'Unlimited queries - no payment required!' 
+                        : `Each query costs ${pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)}` : '0.1'} PYUSD`
+                      }
                     </div>
                   </div>
                 )}
@@ -740,9 +800,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId }) => {
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-8 rounded-2xl font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 {isLoading ? 'Processing...' : 
-                  paymentMethod === 'credits' 
-                    ? `Send (${Math.ceil((pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1) * 100)} credits)`
-                    : `Send (${pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)}` : '0.1'} PYUSD)`
+                  isOwned 
+                    ? 'Send (Unlimited Access)' 
+                    : paymentMethod === 'credits' 
+                      ? `Send (${Math.ceil((pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1) * 100)} credits)`
+                      : `Send (${pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)}` : '0.1'} PYUSD)`
                 }
               </button>
             </form>

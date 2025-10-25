@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { useDropzone } from 'react-dropzone';
 import { MintEcho } from './MintEcho';
+import { contentStorage } from '../services/contentStorage';
 
 type WizardStep = 'upload' | 'processing' | 'configure' | 'minting';
 
@@ -9,6 +10,8 @@ interface EchoConfig {
   name: string;
   description: string;
   pricePerQuery: string;
+  purchasePrice: string;
+  isForSale: boolean;
 }
 
 interface ProcessingResult {
@@ -22,10 +25,18 @@ export const CreatorStudio: React.FC = () => {
   const [step, setStep] = useState<WizardStep>('upload');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [processingResult, setProcessingResult] = useState<ProcessingResult | null>(null);
+  const [originalFileData, setOriginalFileData] = useState<{
+    fileName: string;
+    fileSize: number;
+    contentType: string;
+    data: string;
+  } | null>(null);
   const [echoConfig, setEchoConfig] = useState<EchoConfig>({
     name: '',
     description: '',
-    pricePerQuery: '0.1'
+    pricePerQuery: '0.1',
+    purchasePrice: '50.0',
+    isForSale: true
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +86,47 @@ export const CreatorStudio: React.FC = () => {
         name: nameFromFile
       }));
 
+      // Convert file to base64 for storage
+      const fileReader = new FileReader();
+      fileReader.onload = async () => {
+        const base64Data = (fileReader.result as string).split(',')[1]; // Remove data:type;base64, prefix
+        
+        // Store original file data in state for later use
+        setOriginalFileData({
+          fileName: file.name,
+          fileSize: file.size,
+          contentType: file.type,
+          data: base64Data
+        });
+        
+        // Store content in storage service
+        try {
+          await contentStorage.storeEchoContent(
+            parseInt(result.tokenId),
+            nameFromFile,
+            '', // Description will be filled in configure step
+            result.knowledgeHash, // The processed knowledge base
+            {
+              fileName: file.name,
+              fileSize: file.size,
+              contentType: file.type
+            },
+            address || '',
+            {
+              fileName: file.name,
+              fileSize: file.size,
+              contentType: file.type,
+              data: base64Data
+            }
+          );
+          console.log('📦 Content and original file stored successfully');
+        } catch (error) {
+          console.error('Failed to store content:', error);
+          // Continue with the flow even if content storage fails
+        }
+      };
+      fileReader.readAsDataURL(file);
+
       setStep('configure');
     } catch (err: any) {
       console.error('❌ Upload failed:', err);
@@ -100,11 +152,36 @@ export const CreatorStudio: React.FC = () => {
     disabled: isProcessing
   });
 
-  const handleConfigureSubmit = () => {
+  const handleConfigureSubmit = async () => {
     if (!echoConfig.name.trim() || !echoConfig.description.trim()) {
       setError('Please fill in all required fields');
       return;
     }
+    
+    // Update the stored content with the final description and name
+    if (processingResult) {
+      try {
+        await contentStorage.storeEchoContent(
+          parseInt(processingResult.tokenId),
+          echoConfig.name,
+          echoConfig.description,
+          processingResult.knowledgeHash,
+          {
+            fileName: processingResult.fileName,
+            fileSize: processingResult.fileSize,
+            contentType: uploadedFile?.type || 'application/octet-stream'
+          },
+          address || '',
+          // We need to get the original file data again - let's store it in state
+          originalFileData || undefined
+        );
+        console.log('📦 Updated content with final description and name');
+      } catch (error) {
+        console.error('Failed to update content:', error);
+        // Continue with the flow even if content update fails
+      }
+    }
+    
     setStep('minting');
   };
 
@@ -113,7 +190,8 @@ export const CreatorStudio: React.FC = () => {
     setStep('upload');
     setUploadedFile(null);
     setProcessingResult(null);
-    setEchoConfig({ name: '', description: '', pricePerQuery: '0.1' });
+    setOriginalFileData(null);
+    setEchoConfig({ name: '', description: '', pricePerQuery: '0.1', purchasePrice: '50.0', isForSale: true });
     setError(null);
   };
 
@@ -121,7 +199,8 @@ export const CreatorStudio: React.FC = () => {
     setStep('upload');
     setUploadedFile(null);
     setProcessingResult(null);
-    setEchoConfig({ name: '', description: '', pricePerQuery: '0.1' });
+    setOriginalFileData(null);
+    setEchoConfig({ name: '', description: '', pricePerQuery: '0.1', purchasePrice: '50.0', isForSale: true });
     setError(null);
     setIsProcessing(false);
   };
@@ -328,6 +407,41 @@ export const CreatorStudio: React.FC = () => {
                   Users will pay this amount in PYUSD for each query
                 </p>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Purchase Price (PYUSD)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={echoConfig.purchasePrice}
+                  onChange={(e) => setEchoConfig(prev => ({ ...prev, purchasePrice: e.target.value }))}
+                  placeholder="50.00"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Price for users to buy and own this Echo (set to 0 to make it not for sale)
+                </p>
+              </div>
+
+              <div>
+                <label className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    checked={echoConfig.isForSale}
+                    onChange={(e) => setEchoConfig(prev => ({ ...prev, isForSale: e.target.checked }))}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    List Echo for Sale
+                  </span>
+                </label>
+                <p className="text-sm text-gray-500 mt-1 ml-7">
+                  Allow users to purchase and own this Echo
+                </p>
+              </div>
             </div>
 
             <div className="flex gap-4 mt-6">
@@ -359,6 +473,8 @@ export const CreatorStudio: React.FC = () => {
                 <div><strong>Name:</strong> {echoConfig.name}</div>
                 <div><strong>Description:</strong> {echoConfig.description}</div>
                 <div><strong>Price per Query:</strong> {echoConfig.pricePerQuery} PYUSD</div>
+                <div><strong>Purchase Price:</strong> {echoConfig.purchasePrice} PYUSD</div>
+                <div><strong>For Sale:</strong> {echoConfig.isForSale ? 'Yes' : 'No'}</div>
                 <div><strong>Token ID:</strong> {processingResult.tokenId}</div>
               </div>
             </div>
@@ -369,6 +485,8 @@ export const CreatorStudio: React.FC = () => {
               echoName={echoConfig.name}
               echoDescription={echoConfig.description}
               pricePerQuery={echoConfig.pricePerQuery}
+              purchasePrice={echoConfig.purchasePrice}
+              isForSale={echoConfig.isForSale}
               onMintComplete={handleMintComplete}
             />
           </div>

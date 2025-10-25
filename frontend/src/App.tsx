@@ -24,7 +24,14 @@ const FloatingChatbot = () => {
                   style={{ maxHeight: 'calc(100vh - 100px)' }}
                 >
                   <div className="flex justify-between items-center p-3 bg-purple-600 text-white shadow-md">
-                    <h4 className="text-lg font-semibold">🤖 AI Analyst (Blockscout MCP)</h4>
+                    <div className="flex items-center space-x-2">
+                 <img
+                   src="/echolink_logo.png"
+                   alt="EchoLink Logo"
+                   className="h-10 w-10 object-contain brightness-110 contrast-110"
+                 />
+                      <h4 className="text-lg font-semibold">🤖 AI Analyst (Blockscout MCP)</h4>
+                    </div>
                     <button 
                       onClick={() => setIsOpen(false)}
                       className="text-white hover:text-purple-200 transition-colors p-1 rounded-full hover:bg-purple-700"
@@ -86,12 +93,19 @@ function App() {
             <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
               <div className="flex justify-between items-center">
                 <div className="flex items-center space-x-8">
-                  <h1 
-                    className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700 cursor-pointer hover:from-blue-700 hover:to-indigo-800 transition-all duration-300"
+                  <div 
+                    className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-all duration-300"
                     onClick={() => setActiveTab('dashboard')}
                   >
-                    EchoLink
-                  </h1>
+           <img
+             src="/echolink_logo.png"
+             alt="EchoLink Logo"
+             className="h-16 w-16 object-contain drop-shadow-lg hover:drop-shadow-xl transition-all duration-300 brightness-110 contrast-110"
+           />
+                    <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700">
+                      EchoLink
+                    </h1>
+                  </div>
                   
                   {/* Desktop Navigation */}
                   <nav className="hidden md:flex space-x-1">

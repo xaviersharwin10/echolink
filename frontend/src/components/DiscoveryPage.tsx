@@ -22,10 +22,11 @@ export const DiscoveryPage: React.FC<DiscoveryPageProps> = ({ isWidget = false }
   const { address } = useAccount(); 
   const historyEndRef = useRef<HTMLDivElement>(null);
 
+  // Updated Example Prompts
   const examplePrompts = [
-    "Analyze my activity.",
-    "Compare ETH balances.",
-    "Contract function?",
+    "Highest performing Echo?",
+    "Total platform value?",
+    "Top creator earnings?",
   ];
 
   useEffect(() => {
@@ -102,11 +103,24 @@ export const DiscoveryPage: React.FC<DiscoveryPageProps> = ({ isWidget = false }
 
   const ChatHistoryRenderer = () => (
     <div className="space-y-4 pt-2">
-        {/* Initial Welcome Message */}
         {chatHistory.length === 0 && (
             <div className="flex justify-start">
-                <div className="bg-purple-100 text-gray-800 p-2 rounded-lg max-w-[90%] text-sm shadow-md">
-                    I'm the Echo Analyst 🤖. Ask me anything about on-chain activity or your marketplace performance!
+                <div className="bg-white text-gray-800 p-4 rounded-2xl max-w-[90%] text-sm shadow-lg border border-gray-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 bg-gradient-to-r from-violet-100 via-purple-100 to-indigo-100 rounded-full flex items-center justify-center">
+                        <span className="text-xl">🤖</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="font-bold text-gray-900 mb-1 tracking-wide bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-700 bg-clip-text text-transparent">
+                        EchoLink Analyst
+                      </div>
+                      <div className="text-gray-600 text-xs leading-relaxed">
+                        Powered by <span className="font-semibold text-gray-800">Blockscout</span> • Ask me anything about your Echos or on-chain activity!!
+                      </div>
+                    </div>
+                  </div>
                 </div>
             </div>
         )}
@@ -116,7 +130,7 @@ export const DiscoveryPage: React.FC<DiscoveryPageProps> = ({ isWidget = false }
                 
                 {/* AI / System Bubble */}
                 {(message.sender === 'ai' || message.sender === 'system') && (
-                    <div className={`p-3 rounded-xl max-w-[90%] text-sm shadow-md ${message.sender === 'ai' ? 'bg-slate-50 border border-gray-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+                    <div className={`p-3 rounded-xl max-w-[90%] text-sm shadow-md ${message.sender === 'ai' ? 'bg-slate-100' : 'bg-red-50 text-red-800 border border-red-200'}`}>
                         {message.chartData && (
                              <div className="mb-3 bg-white border border-gray-200 rounded-lg p-2">
                                 <ChartRenderer chartData={message.chartData} />
@@ -128,7 +142,7 @@ export const DiscoveryPage: React.FC<DiscoveryPageProps> = ({ isWidget = false }
 
                 {/* User Bubble */}
                 {message.sender === 'user' && (
-                    <div className="bg-blue-600 text-white p-3 rounded-xl max-w-[80%] text-sm shadow-md">
+                    <div className="bg-violet-600 text-white p-3 rounded-xl max-w-[80%] text-sm shadow-md">
                         {message.text}
                     </div>
                 )}
@@ -138,11 +152,11 @@ export const DiscoveryPage: React.FC<DiscoveryPageProps> = ({ isWidget = false }
         {/* Loading Indicator */}
         {isLoading && (
             <div className="flex justify-start">
-                <div className="bg-gray-200 p-2 rounded-lg max-w-[90%] flex items-center space-x-2 text-sm">
+                <div className="bg-slate-100 p-3 rounded-xl max-w-[90%] flex items-center space-x-2 text-sm">
                     <div className="animate-pulse w-2 h-2 bg-gray-600 rounded-full"></div>
-                    <div className="animate-pulse w-2 h-2 bg-gray-600 rounded-full delay-75"></div>
-                    <div className="animate-pulse w-2 h-2 bg-gray-600 rounded-full delay-150"></div>
-                    <span>Analyzing Blockscout...</span>
+                    <div className="animate-pulse w-2 h-2 bg-gray-600 rounded-full" style={{animationDelay: '0.2s'}}></div>
+                    <div className="animate-pulse w-2 h-2 bg-gray-600 rounded-full" style={{animationDelay: '0.4s'}}></div>
+                    <span className="text-gray-700">Echo Analyst is thinking...</span>
                 </div>
             </div>
         )}
@@ -154,7 +168,7 @@ export const DiscoveryPage: React.FC<DiscoveryPageProps> = ({ isWidget = false }
 
 
   return (
-    <div className={`flex flex-col h-full p-0`}>
+    <div className={`flex flex-col h-full p-0 bg-white`}>
       
       {/* 1. HISTORY CONTAINER (Scrollable) */}
       <div className={`flex-grow overflow-y-auto p-3`}>
@@ -162,16 +176,16 @@ export const DiscoveryPage: React.FC<DiscoveryPageProps> = ({ isWidget = false }
       </div>
 
       {/* 2. INPUT AREA (Fixed to bottom) */}
-      <div className={`border-t border-gray-200 p-3 bg-white sticky bottom-0`}>
+      <div className={`border-t border-gray-200 p-3 bg-slate-50 sticky bottom-0`}>
           
-          {/* Condensed Example Prompts for Widget */}
+          {/* Example Prompts - Updated */}
           <div className="flex items-center gap-1.5 mb-2 overflow-x-auto whitespace-nowrap pb-1">
               {examplePrompts.map((prompt, i) => (
                 <button
                   key={i}
                   onClick={() => handleAskQuestion(prompt)}
                   disabled={isLoading}
-                  className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium hover:bg-blue-100 hover:text-blue-700 transition-colors disabled:opacity-50 flex-shrink-0"
+                  className="px-2.5 py-0.5 bg-gradient-to-r from-violet-100 via-purple-100 to-indigo-100 text-purple-800 rounded-full text-xs font-medium hover:from-violet-200 hover:via-purple-200 hover:to-indigo-200 transition-colors disabled:opacity-50 flex-shrink-0"
                 >
                   {prompt}
                 </button>
@@ -183,15 +197,15 @@ export const DiscoveryPage: React.FC<DiscoveryPageProps> = ({ isWidget = false }
               type="text"
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Ask your question..."
+              placeholder="Ask about Echos, creators, value..."
               disabled={isLoading}
               onKeyDown={(e) => e.key === 'Enter' && !isLoading && handleAskQuestion()}
-              className="w-full pl-3 pr-16 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+              className="w-full pl-3 pr-16 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition-colors bg-white"
             />
             <button
               onClick={() => handleAskQuestion()}
               disabled={isLoading}
-              className="absolute top-0.5 right-0.5 bottom-0.5 bg-purple-600 text-white w-14 rounded-lg font-semibold hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center"
+              className="absolute top-0.5 right-0.5 bottom-0.5 bg-violet-600 text-white w-14 rounded-lg font-semibold hover:from-violet-700 hover:via-purple-700 hover:to-indigo-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center"
             >
               {isLoading ? (
                 <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
@@ -200,7 +214,67 @@ export const DiscoveryPage: React.FC<DiscoveryPageProps> = ({ isWidget = false }
               )}
             </button>
           </div>
+          
       </div>
     </div>
   );
 };
+
+export const FloatingChatbot = () => {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+        <>
+            {/* 1. Pop-up Window */}
+            {isOpen && (
+                <div 
+                  className="fixed bottom-24 right-6 w-full max-w-lg h-[700px] bg-white border border-gray-300 rounded-xl shadow-2xl z-50 overflow-hidden transition-all duration-300 transform scale-100 flex flex-col"
+                  style={{ maxHeight: 'calc(100vh - 100px)' }}
+                >
+                  <div className="flex justify-between items-center p-3 bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-700 text-white shadow-md flex-shrink-0">
+                    <div className="flex items-center space-x-2">
+                 <img
+                   src="/echolink_logo.png"
+                   alt="EchoLink Logo"
+                   className="h-9 w-9 object-contain bg-white/20 rounded-lg p-1"
+                 />
+                      <h4 className="text-lg font-semibold">AI Analyst (Blockscout)</h4>
+                    </div>
+                    <button 
+                      onClick={() => setIsOpen(false)}
+                      className="text-white hover:text-purple-200 transition-colors p-1 rounded-full hover:bg-purple-700"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  {/* This div now correctly fills the remaining space and becomes scrollable */}
+                  <div className="flex-grow overflow-y-auto min-h-0">
+                    <DiscoveryPage isWidget={true} /> 
+                  </div>
+                </div>
+            )}
+            
+            {/* 2. Toggle Button */}
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="fixed bottom-6 right-6 p-3.5 bg-violet-600 text-white rounded-full shadow-xl hover:from-violet-700 hover:via-purple-700 hover:to-indigo-800 transition-all duration-300 z-50 transform hover:scale-105"
+                title="Open Echo Analyst"
+            >
+                {isOpen ? (
+                    // Close Icon (X)
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                ) : (
+                    // Chat Icon
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-3.86 8.25-8.625 8.25a8.625 8.625 0 01-8.625-8.25C3.75 7.444 7.61 3.75 12.375 3.75c4.765 0 8.625 3.694 8.625 8.25z" />
+                    </svg>
+                )}
+            </button>
+        </>
+    );
+}
+
+export default FloatingChatbot;

@@ -282,6 +282,138 @@ source venv/bin/activate
 Update the relevant api keys in knowledge_agent.py, intelligent_agent.py, multiagent_config.py, backend/index.js
 ```
 
+## 🔄 Workflow Sequences
+
+This section details the complete end-to-end flow for each use case in EchoLink.
+
+### 1. Creator Minting Echo
+
+```
+[Creator] → [Frontend: CreatorStudio] → Upload PDF/Video/Audio/Text
+    → [Backend: File Processing] → Extract Text (Whisper for audio/video)
+        → [Python: REBEL Model] → Extract Triples (Subject-Relation-Object)
+            → [MeTTa Builder] → Convert to MeTTa Atoms
+                → [FAISS Indexer] → Create Vector Embeddings
+                    → [Storage] → Save knowledge_base
+                        → [Creator] → Fill Echo Details (Name, Price, etc.)
+                            → [Wallet] → Connect MetaMask
+                                → [Smart Contract: EchoNFT] → Call mintEcho()
+                                    → [Blockchain: Sepolia] → Transaction Confirmed
+                                        → [Frontend] → Echo Listed in Gallery ✅
+```
+
+### 2. User Accessing Paid Echo (Micro-payment with PYUSD)
+
+```
+[User] → [Frontend: EchoGallery] → Select Echo
+    → [Check Ownership] → Not owned
+        → [Display Payment Options] → Select "Pay with PYUSD"
+            → [User] → Enter query & Click "Send (0.1 PYUSD)"
+                → [Wallet: Rainbow] → Approve PYUSD spending (first time)
+                    → [Smart Contract: PYUSD] → approve() transaction
+                        → [Smart Contract: EchoNFT] → transferFrom() PYUSD payment
+                            → [Blockchain] → Transaction confirmed (tx_hash)
+                                → [Frontend] → POST /query with {query, token_id, tx_hash}
+                                    → [Backend: Orchestrator uAgent] → Route to Payment Agent
+                                        → [Payment uAgent] → Validate tx on-chain (Web3.py)
+                                            → [Payment Validated] → Route to Knowledge Agent
+                                                → [Knowledge uAgent] → Load MeTTa graph
+                                                    → [FAISS Search] → Find relevant facts
+                                                        → [MeTTa Reasoning] → Execute query predicates
+                                                            → [ASI:One LLM] → Synthesize answer
+                                                                → [Backend] → Return response
+                                                                    → [Frontend] → Display AI answer ✅
+```
+
+### 3. User Accessing Paid Echo (Using Credits)
+
+```
+[User] → [Frontend: EchoGallery] → Select Echo
+    → [Check Ownership] → Not owned
+        → [Display Payment Options] → Select "Pay with Credits"
+            → [User] → Click "Send (10 credits)"
+                → [Wallet] → Submit useCreditsForQuery() transaction
+                    → [Smart Contract: EchoNFT] → Deduct credits from balance
+                        → [Emit CreditsUsed Event] → Transaction confirmed
+                            → [Frontend] → POST /query with {query, token_id, use_credits: true}
+                                → [Backend: Orchestrator uAgent] → Route to Payment Agent
+                                    → [Payment uAgent] → Validate CreditsUsed event
+                                        → [Payment Validated] → Route to Knowledge Agent
+                                            → [Knowledge uAgent] → Process query (MeTTa + FAISS + ASI:One)
+                                                → [Backend] → Return synthesized answer
+                                                    → [Frontend] → Display answer ✅
+```
+
+### 4. User Buying Complete Echo (Full Ownership)
+
+```
+[User] → [Frontend: EchoGallery] → Find Echo to purchase
+    → [Click "Buy Echo"] → Display price (e.g., 50 PYUSD)
+        → [Wallet] → Check PYUSD balance
+            → [Approve PYUSD] → Call approve() on PYUSD token
+                → [PYUSD Contract] → Allowance granted
+                    → [Frontend] → Verify allowance
+                        → [User] → Click "Confirm Purchase"
+                            → [Smart Contract: EchoNFT] → Call buyEcho(tokenId)
+                                → [Contract Logic] → Transfer PYUSD, update owner mapping
+                                    → [Emit EchoPurchased Event] → Transaction confirmed
+                                        → [Frontend] → Update UI (Show "You Own This" badge)
+                                            → [Unlimited Access Enabled] → No payment needed for future queries ✅
+```
+
+### 5. User Accessing Leaderboard
+
+```
+[User] → [Frontend] → Click "🏆 Leaderboard" tab
+    → [Component: EchoLeaderboard] → Load on mount
+        → [Read Contract] → Call getAllTokenIds() on EchoNFT contract
+            → [Loop Through Token IDs] → Call getEchoData() for each Echo
+                → [Fetch Blockscout Data] → GET /api (module=logs, action=getLogs)
+                    → [Retrieve Events] → QueryPaid + CreditsUsed events from Blockscout API
+                        → [Process Events] → Aggregate queries, earnings per Echo
+                            → [Calculate Metrics] → Total market value, protocol fees, active Echos
+                                → [Fetch Creator Stats] → GET account txlist for top 5 creators
+                                    → [Sort & Display] → Show rankings, charts, price distribution
+                                        → [User Views] → Leaderboard with live on-chain data ✅
+```
+
+### 6. User Accessing AI Analyst Chatbot (Blockscout MCP)
+
+```
+[User] → [Frontend] → Click floating AI button (bottom-right)
+    → [Component: DiscoveryPage] → AI Analyst chatbot opens
+        → [User] → Type question (e.g., "What's the highest performing Echo?")
+            → [Frontend] → POST /ask endpoint with {question, connectedAddress}
+                → [Backend] → Receive request
+                    → [ASI:One LLM] → Bind Blockscout MCP tools
+                        → [LLM Reasoning] → Determine which MCP tools to use
+                            → [Call MCP Tools] → read_contract(), get_address_info(), get_token_transfers()
+                                → [Blockscout MCP Server] → Query blockchain data
+                                    → [Return Data] → Structured JSON with on-chain info
+                                        → [ASI:One LLM] → Process data and generate insights
+                                            → [Backend] → Return natural language answer + charts
+                                                → [Frontend] → Display AI analysis with visualizations ✅
+```
+
+### 7. User Buying Credits
+
+```
+[User] → [Frontend] → Click "💳 Credits" tab
+    → [Component: CreditManager] → Display current credit balance
+        → [User] → Enter amount to purchase (e.g., 100 credits)
+            → [Frontend] → Calculate PYUSD cost (1 PYUSD = 100 credits)
+                → [Check PYUSD Balance] → Verify sufficient funds
+                    → [Check Allowance] → If insufficient, prompt approval
+                        → [Approve PYUSD] → Call approve() on PYUSD contract
+                            → [PYUSD Contract] → Allowance granted
+                                → [Frontend] → Verify allowance
+                                    → [User] → Click "Purchase Credits"
+                                        → [Smart Contract: EchoNFT] → Call purchaseCredits(amount)
+                                            → [Contract] → Transfer PYUSD, mint credits to userCredits mapping
+                                                → [Emit CreditsPurchased Event] → Transaction confirmed
+                                                    → [Frontend] → Refresh balance, show success message ✅
+```
+
 ## 📖 Usage Guide
 
 ### For Creators: Minting an Echo

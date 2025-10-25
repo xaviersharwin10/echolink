@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useContractWrite, useWaitForTransaction, useAccount, useContractRead } from 'wagmi';
+import { useContractWrite, useWaitForTransaction, useAccount, useContractRead, useChainId } from 'wagmi';
 import { readContract } from '@wagmi/core';
 import { EchoCard, EchoInfo } from './EchoCard';
 import { ChatInterface } from './ChatInterface';
 import { EchoContentViewer } from './EchoContentViewer';
+import { useNotification } from '@blockscout/app-sdk';
 import { ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI, QUERY_PAYMENTS_ADDRESS, QUERY_PAID_TOPIC, CREDITS_USED_TOPIC } from '../config/contracts';
 import { parseUnits, formatUnits } from 'viem';
 
@@ -132,6 +133,8 @@ export const EchoGallery: React.FC = () => {
   const [pendingBuyTokenId, setPendingBuyTokenId] = useState<bigint | null>(null);
   const [buyStep, setBuyStep] = useState<'idle' | 'approving' | 'approved' | 'buying' | 'complete'>('idle');
   const [buyingTokenId, setBuyingTokenId] = useState<number | null>(null);
+  const chainId = useChainId();
+  const { openTxToast } = useNotification();
 
   const { address, isConnected } = useAccount();
 
@@ -220,6 +223,7 @@ export const EchoGallery: React.FC = () => {
       });
       
       console.log('✅ Approval transaction sent:', approveTx.hash);
+      openTxToast(chainId.toString(), approveTx.hash); 
       setApprovalTxHash(approveTx.hash);
       setPendingBuyTokenId(tokenId);
       
@@ -254,6 +258,7 @@ export const EchoGallery: React.FC = () => {
           });
 
           console.log('✅ Buy transaction sent:', buyTx.hash);
+          openTxToast(chainId.toString(), buyTx.hash);
           setBuyTxHash(buyTx.hash);
           setBuyStep('buying');
         } catch (error: any) {

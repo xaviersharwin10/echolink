@@ -1,14 +1,80 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { EchoCard, EchoInfo } from './EchoCard';
 import { readContract } from '@wagmi/core';
-import { ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI } from '../config/contracts';
+import { EchoCard, EchoInfo } from './EchoCard';
+import { ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI, QUERY_PAID_TOPIC, CREDITS_USED_TOPIC, QUERY_PAYMENTS_ADDRESS} from '../config/contracts';
 
-const API_BASE_URL = 'https://eth-sepolia.blockscout.com/api/v2';
-const ACTIVITY_THRESHOLD = 3;
-const PYUSD_TOKEN_ADDRESS = '0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9';
+const API_BASE_URL = 'https://eth-sepolia.blockscout.com/api'; // Base RPC API URL
+const ACTIVITY_THRESHOLD = 0;
 
-// Removed hardcoded featuredEchos - now using actual Echo data from blockchain
+interface LogEvent {
+    topics: string[];
+    data: string;
+    timeStamp: string;
+}
+
+const safeParseTokenId = (hexTopic: string): number => {
+    try {
+        const nonZeroIndex = hexTopic.slice(2).search(/[^0]/);
+        if (nonZeroIndex === -1) return 0;
+        const cleanHex = '0x' + hexTopic.slice(2 + nonZeroIndex);
+        return Number(BigInt(cleanHex));
+    } catch (e) {
+        return 0;
+    }
+};
+
+const fetchBlockscoutData = async (params: Record<string, string>): Promise<any> => {
+    const query = new URLSearchParams(params).toString();
+    const response = await fetch(`${API_BASE_URL}?${query}`);
+    const data = await response.json();
+    return data.result || [];
+};
+
+const fetchEchoQueryStats = async (tokenIdNumber: number) => {
+    const [queryPaidLogs, creditsUsedLogs] = await Promise.all([
+          fetchBlockscoutData({
+            module: 'logs',
+            action: 'getLogs',
+            address: QUERY_PAYMENTS_ADDRESS,
+            topic0: QUERY_PAID_TOPIC,
+            fromBlock: '0', 
+            toBlock: 'latest'
+          }),
+          // 2. CreditsUsed: Logs from the EchoNFT contract
+          fetchBlockscoutData({
+            module: 'logs',
+            action: 'getLogs',
+            address: ECHOLNK_NFT_ADDRESS,
+            topic0: CREDITS_USED_TOPIC,
+            fromBlock: '0', 
+            toBlock: 'latest', 
+          }),
+    ]);
+
+    let totalQueries = 0;
+
+    const processLogs = (logs: LogEvent[], isCredit: boolean) => {
+        logs.forEach(log => {
+            const tokenTopicIndex = isCredit ? 2 : 3;
+            
+            if (log.topics.length > tokenTopicIndex) {
+                const logTokenId = safeParseTokenId(log.topics[tokenTopicIndex]);
+                
+                if (logTokenId === tokenIdNumber) {
+                    totalQueries++;
+                }
+            }
+        });
+    };
+
+    processLogs(queryPaidLogs, false);
+    processLogs(creditsUsedLogs, true);
+
+    return { totalQueries };
+};
+
+// --- Dashboard Component Definitions ---
 
 interface EchoDashboardProps {
   onNavigate: (tab: 'dashboard' | 'mint' | 'gallery' | 'credits' | 'leaderboard') => void;
@@ -19,7 +85,7 @@ export const EchoDashboard: React.FC<EchoDashboardProps> = ({ onNavigate }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
     totalEchos: 0,
-    activeUsers: 0,
+    activeCreators: 0, 
     totalQueries: 0
   });
   const { address, isConnected } = useAccount();
@@ -30,15 +96,9 @@ export const EchoDashboard: React.FC<EchoDashboardProps> = ({ onNavigate }) => {
       const foundEchos: EchoInfo[] = [];
 
       try {
-        // Get total count of Echos from the contract
-        const totalCount = Number(await readContract({
-          address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
-          abi: ECHO_NFT_ABI,
-          functionName: 'getTotalEchoes',
-        }) as bigint);
-
-        let totalQueries = 0;
-        let activeUsers = 0;
+        let aggregatedTotalQueries = 0;
+        let activeCreatorsCount = 0;
+        const processedCreators = new Set<string>();
 
         // Get all actual token IDs that exist (same as EchoGallery)
         const allTokenIds = await readContract({
@@ -65,25 +125,29 @@ export const EchoDashboard: React.FC<EchoDashboardProps> = ({ onNavigate }) => {
 
             const [name, description, creator, pricePerQuery, isActive, purchasePrice, isForSale, owner] = echoData;
 
-            const activityRes = await fetch(`${API_BASE_URL}/addresses/${creator}/token-transfers?token=${PYUSD_TOKEN_ADDRESS}`);
-            const activityData = await activityRes.json();
-            const incomingTransfers = activityData?.items.filter((tx: any) => tx.to.hash.toLowerCase() === creator.toLowerCase());
-            const queries = incomingTransfers.length || 0;
+            const { totalQueries } = await fetchEchoQueryStats(tokenId);
+
+            // Aggregate total queries for the dashboard stat
+            aggregatedTotalQueries += totalQueries;
             
-            totalQueries += queries;
-            if (queries > ACTIVITY_THRESHOLD) activeUsers++;
+            // Determine activity for this creator and update global stats
+            const isCreatorActive = totalQueries > ACTIVITY_THRESHOLD;
+            if (isCreatorActive && !processedCreators.has(creator)) {
+                activeCreatorsCount++;
+                processedCreators.add(creator);
+            }
 
             // Use actual Echo data instead of hardcoded data
             foundEchos.push({
               tokenId: tokenId,
               owner: owner as string,
               creator: creator,
-              isCreatorActive: queries > ACTIVITY_THRESHOLD,
-              totalQueries: queries,
+              isCreatorActive: isCreatorActive,
+              totalQueries: totalQueries, 
               pricePerQuery: pricePerQuery,
               purchasePrice: purchasePrice,
               isForSale: isForSale,
-              isOwned: false, // Dashboard doesn't check ownership
+              isOwned: false, 
               name: name || `Echo #${tokenId}`,
               description: description || "An AI entity containing unique knowledge, ready for exploration.",
               imageUrl: `https://source.unsplash.com/random/800x600?sig=${tokenId}`,
@@ -92,15 +156,14 @@ export const EchoDashboard: React.FC<EchoDashboardProps> = ({ onNavigate }) => {
 
           } catch (error) {
             console.warn(`Failed to fetch data for token ${tokenId}`, error);
-            // Skip this token and continue with the next one
             continue;
           }
         }
 
         setStats({
-          totalEchos: totalCount,
-          activeUsers: activeUsers,
-          totalQueries: totalQueries
+          totalEchos: allTokenIds.length,
+          activeCreators: activeCreatorsCount,
+          totalQueries: aggregatedTotalQueries
         });
 
       } catch (error) {
@@ -163,8 +226,8 @@ export const EchoDashboard: React.FC<EchoDashboardProps> = ({ onNavigate }) => {
 
             {isConnected && (
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl max-w-md mx-auto animate-slide-up">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">🎉 Welcome Back!</h3>
-                <p className="text-gray-600 mb-4 text-center">Ready to explore the knowledge universe?</p>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">🎉 Welcome Back!</h3>
+                <p className="text-gray-600 mb-4">Ready to explore the knowledge universe?</p>
                 <div className="flex gap-3 justify-center">
                   <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-lg font-semibold text-sm">
                     ✅ Connected
@@ -185,22 +248,22 @@ export const EchoDashboard: React.FC<EchoDashboardProps> = ({ onNavigate }) => {
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in">
             <div className="text-center">
               <div className="text-3xl font-bold text-blue-600 mb-2">{stats.totalEchos}</div>
-              <div className="text-gray-600 font-medium">Active Echos</div>
+              <div className="text-gray-600 font-medium">Total Echos</div>
               <div className="text-sm text-gray-500 mt-1">Knowledge NFTs on-chain</div>
             </div>
           </div>
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in-delay">
             <div className="text-center">
-              <div className="text-3xl font-bold text-indigo-600 mb-2">{stats.activeUsers}</div>
+              <div className="text-3xl font-bold text-indigo-600 mb-2">{stats.activeCreators}</div>
               <div className="text-gray-600 font-medium">Active Creators</div>
-              <div className="text-sm text-gray-500 mt-1">Echo creators earning</div>
+              <div className="text-sm text-gray-500 mt-1">Unique creators earning</div>
             </div>
           </div>
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in-delay-2">
             <div className="text-center">
               <div className="text-3xl font-bold text-purple-600 mb-2">{stats.totalQueries}</div>
               <div className="text-gray-600 font-medium">Total Queries</div>
-              <div className="text-sm text-gray-500 mt-1">Knowledge interactions</div>
+              <div className="text-sm text-gray-500 mt-1">Queries processed via platform</div>
             </div>
           </div>
         </div>
@@ -223,7 +286,7 @@ export const EchoDashboard: React.FC<EchoDashboardProps> = ({ onNavigate }) => {
                 className="animate-slide-up"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <EchoCard echo={echo} onSelect={() => {}} />
+                <EchoCard echo={echo} onSelect={(tokenId) => onNavigate('gallery')} />
               </div>
             ))}
           </div>

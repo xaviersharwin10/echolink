@@ -42,17 +42,11 @@ export const MintEcho: React.FC<MintEchoProps> = ({
   });
 
   useEffect(() => {
-    if (data?.hash) {
+    if (isSuccess && onMintComplete && data?.hash) {
       openTxToast(chainId.toString(), data.hash);
-    }
-  }, [data?.hash, openTxToast]);
-
-  // Handle mint completion
-  useEffect(() => {
-    if (isSuccess && onMintComplete) {
       onMintComplete();
     }
-  }, [isSuccess, onMintComplete]);
+  }, [isSuccess, onMintComplete, data?.hash]); 
 
   const handleMint = () => {
     if (!address || !echoName.trim() || !echoDescription.trim()) return;

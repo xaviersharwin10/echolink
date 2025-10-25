@@ -120,32 +120,34 @@ EchoLink provides comprehensive blockchain analytics powered by Blockscout:
 ### System Components
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                       ECHOLINK SYSTEM                        │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  Frontend (React + TypeScript)                              │
-│  ├── EchoDashboard (User dashboard)                         │
-│  ├── CreatorStudio (Mint Echo NFTs)                         │
-│  ├── EchoGallery (Browse marketplace)                       │
-│  ├── CreditManager (Buy credits)                            │
-│  └── AI Analyst (Blockscout MCP chatbot)                    │
-│                                                              │
-│  Backend (Express.js + TypeScript)                          │
-│  ├── Creator Studio Server (File upload & processing)       │
-│  └── Agent Services (Orchestrator, Payment, Knowledge)      │
-│                                                              │
-│  Smart Contracts (Solidity)                                 │
-│  ├── EchoNFT (ERC-721 with access control)                  │
-│  └── QueryPayments (Payment handling)                       │
-│                                                              │
-│  AI/Knowledge Processing                                    │
-│  ├── REBEL Model (Triple extraction)                        │
-│  ├── MeTTa (Symbolic reasoning)                             │
-│  ├── FAISS (Vector embeddings)                              │
-│  └── ASI:One LLM (Natural language synthesis)               │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                         ECHOLINK SYSTEM                             |
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  Frontend (React + TypeScript)                                      │
+│  ├── EchoDashboard (User dashboard)                                 │
+│  ├── CreatorStudio (Mint Echo NFTs)                                 │
+│  ├── EchoGallery (Browse marketplace)                               │
+│  ├── CreditManager (Buy credits)                                    │
+│  ├── EchoLeaderboard (Analytics & rankings)                         │
+│  └── AI Analyst (Blockscout MCP chatbot)                            │
+│                                                                     │
+│  Backend (Express.js + TypeScript)                                  │
+│  ├── Creator Studio Server (File upload & processing)               │
+│  ├── Agent Services (Orchestrator, Payment, Knowledge)              │
+│  └── Blockscout MCP Integration (AI analyst endpoint)               │
+│                                                                     │
+│  Smart Contracts (Solidity)                                         │
+│  ├── EchoNFT (ERC-721 with access control)                          │
+│  └── QueryPayments (Payment handling)                               │
+│                                                                     │
+│  AI/Knowledge Processing                                            │
+│  ├── REBEL Model (Triple extraction)                                │
+│  ├── MeTTa (Symbolic reasoning)                                     │
+│  ├── FAISS (Vector embeddings)                                      │
+│  └── ASI:One LLM (Natural language synthesis)                       │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Multi-Agent Architecture (ASI Alliance Integration)

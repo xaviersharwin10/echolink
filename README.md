@@ -311,6 +311,37 @@ This section details the complete end-to-end flow for each use case in EchoLink.
                                         → [Frontend] → Echo Listed in Gallery ✅
 ```
 
+```mermaid
+graph LR
+    %% All nodes use standard rectangles [ ] or terminal shapes (( ))
+    %% All special characters like : and () have been removed or simplified.
+    A(("Start:<br>Creator"))
+    B[Upload PDF / Video / Audio / Text]
+    C[Backend: File Processing<br>Extract Text via Whisper]
+    D[Python: REBEL Model<br>Extract Triples S-R-O]
+    E[MeTTa Builder<br>Convert to MeTTa Atoms]
+    F[FAISS Indexer<br>Create Vector Embeddings]
+    G[(Storage: Save knowledge base)]
+    H[Creator: Fill Echo Details]
+    I[Wallet: Connect MetaMask]
+    J[Smart Contract: EchoNFT<br>Call mintEcho]
+    K[Blockchain: Sepolia<br>Transaction Confirmed]
+    L(("End: Echo Listed<br>in Gallery ✅"))
+
+    %% Flow
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> J
+    J --> K
+    K --> L
+```
+
 ### 2. User Accessing Paid Echo (Micro-payment with PYUSD)
 
 ```
@@ -353,6 +384,89 @@ This section details the complete end-to-end flow for each use case in EchoLink.
                                                     → [Frontend] → Display answer ✅
 ```
 
+```mermaid
+graph LR
+    %% Start Node
+    A((Start: Access Paid Echo))
+
+    %% Initial User Actions
+    B["Frontend: Select Echo"]
+    C{"Check Ownership"}
+    D{"Display Payment Options"}
+
+    %% Payment Choice Branch
+    D -- "Select 'Pay with PYUSD'" --> E
+    D -- "Select 'Pay with Credits'" --> O
+
+    %% PYUSD Payment Flow (E to N)
+    E["User: Enter Query & Click 'Send (0.1 PYUSD)'"]
+    F{"Wallet: Approve PYUSD spending (first time)?"}
+    G["Smart Contract: PYUSD<br/>approve() transaction"]
+    H["Smart Contract: EchoNFT<br/>transferFrom() PYUSD payment"]
+    I["Blockchain: Tx Confirmed (tx_hash)"]
+    J["Frontend: POST /query {query, token_id, tx_hash}"]
+    K["Backend: Orchestrator uAgent<br/>Route to Payment Agent"]
+    L["Payment uAgent: Validate tx on-chain (Web3.py)"]
+    M["Payment Validated"]
+    N["Route to Knowledge Agent"]
+
+    F -- "No" --> H
+    F -- "Yes" --> G
+    G --> H
+
+    %% Credits Payment Flow (O to S)
+    O["User: Click 'Send (10 credits)'"]
+    P["Wallet: Submit useCreditsForQuery() Tx"]
+    Q["Smart Contract: EchoNFT<br/>Deduct credits & Emit CreditsUsed Event"]
+    R["Frontend: POST /query {query, token_id, use_credits: true}"]
+    S["Backend: Orchestrator uAgent<br/>Route to Payment Agent"]
+    T["Payment uAgent: Validate CreditsUsed event"]
+    U["Payment Validated"]
+    V["Route to Knowledge Agent"]
+
+    %% Common Knowledge Processing Flow (W to Z)
+    W["Knowledge uAgent: Load MeTTa graph"]
+    X["FAISS Search: Find relevant facts"]
+    Y["MeTTa Reasoning: Execute query predicates"]
+    Z["ASI:One LLM: Synthesize answer"]
+    AA["Backend: Return synthesized answer"]
+    BB(("End: Frontend Display AI Answer ✅"))
+
+    %% Connections
+    A --> B
+    B --> C
+    C -- "Not owned" --> D
+    
+    %% PYUSD Path
+    E --> F
+    H --> I
+    I --> J
+    J --> K
+    K --> L
+    L --> M
+    M --> N
+
+    %% Credits Path
+    O --> P
+    P --> Q
+    Q --> R
+    R --> S
+    S --> T
+    T --> U
+    U --> V
+
+    %% Merge to Knowledge Agent
+    N --> W
+    V --> W
+
+    %% Knowledge Processing
+    W --> X
+    X --> Y
+    Y --> Z
+    Z --> AA
+    AA --> BB
+```
+
 ### 4. User Buying Complete Echo (Full Ownership)
 
 ```
@@ -370,6 +484,40 @@ This section details the complete end-to-end flow for each use case in EchoLink.
                                             → [Unlimited Access Enabled] → No payment needed for future queries ✅
 ```
 
+```mermaid
+graph LR
+    %% Define Shapes using multiline labels
+    A(("Start"))
+    B["Frontend: Find Echo & Click 'Buy'"]
+    C{"Check PYUSD Balance"}
+    D{"Is PYUSD<br/>Approval Required?"}
+    E["Wallet: Call approve() on<br/>PYUSD Token"]
+    F["PYUSD Contract:<br/>Allowance Granted"]
+    G["Frontend: Verify Allowance<br/>& Confirm Purchase"]
+    H["Smart Contract:<br/>Call buyEcho(tokenId)"]
+    I["Contract Logic: Transfer <br/>PYUSD & Update Owner <br/> Mapping"]
+    J["Blockchain: Emit <br/> EchoPurchased Event <br/> Confirmed"]
+    K["Frontend: Update UI<br/>(Show 'You Own This' badge)"]
+    L(("End: <br/> Unlimited Access <br/> Enabled ✅"))
+
+    %% Define Flow
+    A --> B
+    B --> C
+    C --> D
+    
+    %% Conditional Flow for Approval
+    D -- "No" --> G
+    D -- "Yes" --> E
+    E --> F
+    F --> G
+    
+    G --> H
+    H --> I
+    I --> J
+    J --> K
+    K --> L
+```
+
 ### 5. User Accessing Leaderboard
 
 ```
@@ -384,6 +532,50 @@ This section details the complete end-to-end flow for each use case in EchoLink.
                                 → [Fetch Creator Stats] → GET account txlist for top 5 creators
                                     → [Sort & Display] → Show rankings, charts, price distribution
                                         → [User Views] → Leaderboard with live on-chain data ✅
+```
+
+```mermaid
+graph LR
+    %% Start and Initial Action
+    A(("Start: User Clicks Leaderboard Tab"))
+    B[Frontend: Load EchoLeaderboard Component]
+    
+    %% Data Retrieval - Step 1: Get All Echos
+    C[Read Contract - Call getAllTokenIds on EchoNFT]
+    
+    %% Data Retrieval - Step 2: Loop & Fetch Data
+    subgraph Data Aggregation Loop
+        D{Loop Through All Token IDs}
+        D -- Yes --> E
+        E[Call getEchoData for current Echo]
+        
+        %% API Call for Transaction History
+        F[Fetch Blockscout Data - GET /api logs]
+        G[Retrieve Events - QueryPaid + CreditsUsed Events]
+        
+        G --> H
+        H[Process Events - Aggregate queries and earnings]
+        H --> D
+        D -- No --> I
+    end
+    
+    %% Final Calculation & Display
+    I[Calculate Metrics - Total market value, fees, active Echos]
+    J[Fetch Creator Stats - GET account txlist for top 5 creators]
+    K[Sort and Display - Show rankings, charts, price distribution]
+    L(("End: Leaderboard Displayed ✅"))
+    
+    %% Connections
+    A --> B
+    B --> C
+    C --> D
+    E --> F
+    F --> G
+    
+    %% Exit Loop and Final Steps
+    I --> J
+    J --> K
+    K --> L
 ```
 
 ### 6. User Accessing AI Analyst Chatbot (Blockscout MCP)
@@ -403,6 +595,43 @@ This section details the complete end-to-end flow for each use case in EchoLink.
                                             → [Backend] → Return natural language answer + charts
                                                 → [Frontend] → Display AI analysis with visualizations ✅
 ```
+```mermaid
+graph LR
+    %% Text highly simplified to avoid strict parser errors
+    A(("Start User Clicks AI Button"))
+    B[Frontend AI Analyst Chatbot Opens]
+    C[User Type Question Highest performing Echo]
+    D[Frontend POST /ask endpoint]
+    
+    %% Backend and LLM Initialization
+    E[Backend Receive Request]
+    F[ASI One LLM Bind Blockscout MCP Tools]
+    G[LLM Reasoning Determine which tools to use]
+    
+    %% Tool Execution
+    H[Call MCP Tools read_contract, get_address_info, etc]
+    I[Blockscout MCP Server Query Blockchain Data]
+    J[Return Data Structured JSON On-Chain Info]
+    
+    %% Final Synthesis
+    K[ASI One LLM Process Data and Generate Insights]
+    L[Backend Return Answer and Charts]
+    M(("End Display AI Analysis with Visualizations ✅"))
+
+    %% Connections
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> J
+    J --> K
+    K --> L
+    L --> M
+```
 
 ### 7. User Buying Credits
 
@@ -421,6 +650,53 @@ This section details the complete end-to-end flow for each use case in EchoLink.
                                             → [Contract] → Transfer PYUSD, mint credits to userCredits mapping
                                                 → [Emit CreditsPurchased Event] → Transaction confirmed
                                                     → [Frontend] → Refresh balance, show success message ✅
+```
+
+```mermaid
+graph LR
+    %% All nodes are simple rectangles or terminals, and text is simplified
+    A(("Start User Clicks Credits Tab"))
+    B[Component CreditManager Display current credit balance]
+    C[User Enter Amount to Purchase e g 100 credits]
+    D[Frontend Calculate PYUSD Cost 1 PYUSD = 100 credits]
+    E{Check Wallet Verify Sufficient PYUSD Funds}
+    
+    %% Conditional Check for PYUSD Allowance
+    F{Check Allowance Is EchoNFT approved to spend PYUSD}
+    
+    G[Wallet Call approve on PYUSD Contract]
+    H[PYUSD Contract Allowance Granted]
+    I[Frontend Verify Allowance]
+    
+    %% Final Purchase Action
+    J[User Click Purchase Credits]
+    K[Smart Contract EchoNFT Call purchaseCredits amount]
+    L[Contract Transfer PYUSD Mint credits to userCredits mapping]
+    M[Blockchain Emit CreditsPurchased Event Confirmed]
+    N(("End Refresh Balance Show Success ✅"))
+
+    %% Connections
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    
+    %% E - Funds Check Logic (FIXED)
+    E -- Funds OK --> F
+    E -- Insufficient Funds --> N
+
+    %% F - Allowance Branch (FIXED)
+    F -- Insufficient --> G
+    F -- Sufficient --> J
+    G --> H
+    H --> I
+    I --> J
+    
+    %% Transaction Flow
+    J --> K
+    K --> L
+    L --> M
+    M --> N
 ```
 
 ## 📖 Usage Guide

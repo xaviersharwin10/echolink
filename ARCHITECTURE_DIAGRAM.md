@@ -364,4 +364,3 @@ User → Frontend → EchoNFT Contract → approvePYUSD()
 ---
 
 **Built for ETHOnline 2025**  
-**Targeting: ASI Alliance 1st Place • PYUSD Grand Prize • Blockscout MCP Prize**

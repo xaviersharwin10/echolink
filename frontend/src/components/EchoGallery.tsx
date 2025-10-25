@@ -1,11 +1,46 @@
 import React, { useState, useEffect } from 'react';
+import { useContractWrite, useWaitForTransaction, useAccount, useContractRead } from 'wagmi';
 import { readContract } from '@wagmi/core';
 import { EchoCard, EchoInfo } from './EchoCard';
 import { ChatInterface } from './ChatInterface';
-import { ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI,QUERY_PAYMENTS_ADDRESS, QUERY_PAID_TOPIC, CREDITS_USED_TOPIC } from '../config/contracts';
+import { EchoContentViewer } from './EchoContentViewer';
+import { ECHOLNK_NFT_ADDRESS, ECHO_NFT_ABI, QUERY_PAYMENTS_ADDRESS, QUERY_PAID_TOPIC, CREDITS_USED_TOPIC } from '../config/contracts';
+import { parseUnits, formatUnits } from 'viem';
 
 const API_BASE_URL = 'https://eth-sepolia.blockscout.com/api';
 const ACTIVITY_THRESHOLD = 1;
+const PYUSD_ADDRESS = '0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9';
+const PYUSD_DECIMALS = 6;
+
+const PYUSD_ABI = [
+  {
+    name: 'approve',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  {
+    name: 'balanceOf',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'account', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'allowance',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'owner', type: 'address' },
+      { name: 'spender', type: 'address' },
+    ],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+];
 
 interface LogEvent {
     topics: string[];
@@ -88,90 +123,273 @@ const hardcodedData: { [key: number]: { name: string; description: string; image
 
 export const EchoGallery: React.FC = () => {
   const [selectedTokenId, setSelectedTokenId] = useState<bigint | null>(null);
+  const [viewingContentTokenId, setViewingContentTokenId] = useState<bigint | null>(null);
   const [availableEchos, setAvailableEchos] = useState<EchoInfo[]>([]);
   const [isScanning, setIsScanning] = useState<boolean>(true);
+  const [isBuying, setIsBuying] = useState<boolean>(false);
+  const [buyTxHash, setBuyTxHash] = useState<`0x${string}` | undefined>();
+  const [approvalTxHash, setApprovalTxHash] = useState<`0x${string}` | undefined>();
+  const [pendingBuyTokenId, setPendingBuyTokenId] = useState<bigint | null>(null);
+  const [buyStep, setBuyStep] = useState<'idle' | 'approving' | 'approved' | 'buying' | 'complete'>('idle');
+  const [buyingTokenId, setBuyingTokenId] = useState<number | null>(null);
 
-  useEffect(() => {
-    const scanForAllEchos = async () => {
-      setIsScanning(true);
-      const foundEchos: EchoInfo[] = [];
+  const { address, isConnected } = useAccount();
 
-      try {
-        // Get all Echos from the contract in one call
-        const allEchoesData = await readContract({
-          address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
-          abi: ECHO_NFT_ABI,
-          functionName: 'getAllEchoes',
-        });
+  // Contract write for buying Echo
+  const { writeAsync: buyEcho, isLoading: isBuyPending } = useContractWrite({
+    address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
+    abi: ECHO_NFT_ABI,
+    functionName: 'buyEcho',
+  });
 
-        const [tokenIds, names, descriptions, creators, pricesPerQuery, activeStatuses] = allEchoesData as [
-bigint[], string[], string[], `0x${string}`[], bigint[], boolean[]];        // Process each Echo
-        for (let i = 0; i < tokenIds.length; i++) {
-          const tokenId = Number(tokenIds[i]);
-          const name = names[i];
-          const description = descriptions[i];
-          const creator = creators[i];
-          const pricePerQuery = pricesPerQuery[i];
-          const isActive = activeStatuses[i];
+  // Contract write for approving PYUSD
+  const { writeAsync: approvePYUSD } = useContractWrite({
+    address: PYUSD_ADDRESS as `0x${string}`,
+    abi: PYUSD_ABI,
+    functionName: 'approve',
+  });
 
-          try {
-            // Get the actual owner of the NFT
-            const owner = await readContract({
-              address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
-              abi: ECHO_NFT_ABI,
-              functionName: 'ownerOf',
-              args: [BigInt(tokenId)],
-            });
+  // Wait for approval transaction
+  const { isLoading: isApprovalTxPending, isSuccess: isApprovalTxSuccess } = useWaitForTransaction({
+    hash: approvalTxHash,
+  });
 
-            const { totalQueries } = await fetchEchoQueryStats(tokenId);
-            const isCreatorActive = totalQueries > ACTIVITY_THRESHOLD; 
-            const hardcoded = hardcodedData[tokenId] || {
-              name: name || `Echo #${tokenId}`,
-              description: description || "An AI entity containing a unique body of knowledge, ready for you to explore.",
-              imageUrl: `https://source.unsplash.com/random/800x600?sig=${tokenId}`
-            };
-            
-            foundEchos.push({
-              tokenId: tokenId,
-              owner: owner as string,
-              creator: creator,
-              isCreatorActive: isCreatorActive,
-              totalQueries: totalQueries,
-              pricePerQuery: pricePerQuery, 
-              ...hardcoded
-            });
+  // Wait for buy transaction
+  const { isLoading: isBuyTxPending, isSuccess: isBuyTxSuccess } = useWaitForTransaction({
+    hash: buyTxHash,
+  });
 
-          } catch (error) {
-            console.warn(`Failed to fetch Blockscout data for token ${tokenId}. Using fallbacks.`, error);
-            const hardcoded = hardcodedData[tokenId] || {
-              name: name || `Echo #${tokenId}`,
-              description: description || "An AI entity containing a unique body of knowledge, ready for you to explore.",
-              imageUrl: `https://source.unsplash.com/random/800x600?sig=${tokenId}`
-            };
-            
-            foundEchos.push({
-              tokenId: tokenId,
-              owner: creator, 
-              creator: creator,
-              isCreatorActive: false,
-              totalQueries: 0, 
-              pricePerQuery: pricePerQuery,
-              ...hardcoded
-            });
-          }
-        }
+  // Read PYUSD balance
+  const { data: pyusdBalance } = useContractRead({
+    address: PYUSD_ADDRESS as `0x${string}`,
+    abi: PYUSD_ABI,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    watch: true,
+    enabled: !!address,
+  });
 
-      } catch (error) {
-        console.error('❌ Failed to fetch all Echos:', error);
+  // Read current allowance
+  const { data: currentAllowance, refetch: refetchAllowance } = useContractRead({
+    address: PYUSD_ADDRESS as `0x${string}`,
+    abi: PYUSD_ABI,
+    functionName: 'allowance',
+    args: address ? [address, ECHOLNK_NFT_ADDRESS] : undefined,
+    watch: true,
+    enabled: !!address,
+  });
+
+  const handleEchoBuy = async (tokenId: bigint) => {
+    if (!isConnected || !address) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
+    // Find the Echo data to get purchase price
+    const echo = availableEchos.find(e => e.tokenId === Number(tokenId));
+    if (!echo) {
+      alert('Echo not found');
+      return;
+    }
+
+    const purchasePrice = echo.purchasePrice;
+    const purchasePriceInWei = purchasePrice;
+
+    console.log('Buying Echo:', tokenId, 'Price:', formatUnits(purchasePrice, 6));
+
+    try {
+      setIsBuying(true);
+
+      // Check if user has enough PYUSD
+      if (pyusdBalance && (pyusdBalance as bigint) < purchasePriceInWei) {
+        const balance = formatUnits(pyusdBalance as bigint, PYUSD_DECIMALS);
+        const required = formatUnits(purchasePriceInWei, PYUSD_DECIMALS);
+        alert(`Insufficient PYUSD balance. You have ${balance} PYUSD but need ${required} PYUSD`);
+        return;
       }
 
-      setAvailableEchos(foundEchos);
-      setIsScanning(false);
+      // Set the token being bought
+      setBuyingTokenId(Number(tokenId));
+
+      // Always approve first (like ChatInterface does)
+      console.log('🔐 Step 1: Approving PYUSD spend...');
+      setBuyStep('approving');
+      
+      const approveTx = await approvePYUSD({
+        args: [ECHOLNK_NFT_ADDRESS, purchasePriceInWei],
+      });
+      
+      console.log('✅ Approval transaction sent:', approveTx.hash);
+      setApprovalTxHash(approveTx.hash);
+      setPendingBuyTokenId(tokenId);
+      
+      // Wait for approval to complete - useEffect will handle the buy after approval
+      return;
+
+    } catch (error: any) {
+      console.error('Buy transaction failed:', error);
+      alert(`Buy failed: ${error.message || 'Unknown error'}`);
+      setIsBuying(false);
+      setBuyStep('idle');
+      setPendingBuyTokenId(null);
+      setApprovalTxHash(undefined);
+      setBuyingTokenId(null);
+    }
+  };
+
+  // Handle successful approval - proceed with buy
+  useEffect(() => {
+    const executeBuy = async () => {
+      if (isApprovalTxSuccess && buyStep === 'approving' && pendingBuyTokenId) {
+        console.log('✅ Approval confirmed on-chain');
+        setBuyStep('approved');
+
+        // Refetch allowance to ensure it's updated
+        await refetchAllowance();
+
+        try {
+          console.log('💸 Step 2: Executing buy transaction...');
+          const buyTx = await buyEcho({
+            args: [pendingBuyTokenId],
+          });
+
+          console.log('✅ Buy transaction sent:', buyTx.hash);
+          setBuyTxHash(buyTx.hash);
+          setBuyStep('buying');
+        } catch (error: any) {
+          console.error('❌ Buy transaction failed:', error);
+          alert(`Buy failed: ${error.message || 'Unknown error'}`);
+          setIsBuying(false);
+          setPendingBuyTokenId(null);
+          setBuyStep('idle');
+          setBuyingTokenId(null);
+        }
+      }
     };
 
+    executeBuy();
+  }, [isApprovalTxSuccess, buyStep, pendingBuyTokenId]);
+
+  // Handle successful purchase
+  useEffect(() => {
+    if (isBuyTxSuccess && buyStep === 'buying') {
+      console.log('🎉 Buy transaction confirmed on-chain');
+      setBuyStep('complete');
+      alert('🎉 Echo purchased successfully! You now own this Echo and have unlimited access.');
+      // Clear pending state
+      setPendingBuyTokenId(null);
+      setApprovalTxHash(undefined);
+      setIsBuying(false);
+      setBuyStep('idle');
+      setBuyingTokenId(null);
+      // Refresh the Echo list to update ownership status
+      scanForAllEchos();
+    }
+  }, [isBuyTxSuccess, buyStep]);
+
+  // Function to refresh Echo data
+  const scanForAllEchos = async () => {
+    setIsScanning(true);
+    const foundEchos: EchoInfo[] = [];
+
+    try {
+      // Get total number of Echos first
+      const totalEchos = await readContract({
+        address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
+        abi: ECHO_NFT_ABI,
+        functionName: 'getTotalEchoes',
+      });
+
+      const totalCount = Number(totalEchos);
+      console.log(`Found ${totalCount} total Echos`);
+
+      // Get all actual token IDs that exist
+      const allTokenIds = await readContract({
+        address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
+        abi: ECHO_NFT_ABI,
+        functionName: 'getAllTokenIds',
+      }) as bigint[];
+
+      console.log(`🔍 Found ${allTokenIds.length} actual token IDs:`, allTokenIds.map(id => Number(id)));
+      
+      // Process each actual token ID
+      for (const tokenIdBigInt of allTokenIds) {
+        const tokenId = Number(tokenIdBigInt);
+        try {
+          // Get individual Echo data
+          const echoData = await readContract({
+            address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
+            abi: ECHO_NFT_ABI,
+            functionName: 'getEchoData',
+            args: [BigInt(tokenId)],
+          });
+
+          const [name, description, creator, pricePerQuery, purchasePrice, isActive, isForSale, owner] = echoData as unknown as [
+            string, string, `0x${string}`, bigint, bigint, boolean, boolean, `0x${string}`
+          ];
+
+          // Skip inactive Echos
+          if (!isActive) {
+            continue;
+          }
+
+          const { totalQueries } = await fetchEchoQueryStats(tokenId);
+          const isCreatorActive = totalQueries > ACTIVITY_THRESHOLD; 
+          const hardcoded = hardcodedData[tokenId] || {
+            name: name || `Echo #${tokenId}`,
+            description: description || "An AI entity containing a unique body of knowledge, ready for you to explore.",
+            imageUrl: `https://source.unsplash.com/random/800x600?sig=${tokenId}`
+          };
+          
+          // Check if current user owns this Echo
+          const isOwned = address && (owner as string).toLowerCase() === address.toLowerCase();
+
+          foundEchos.push({
+            tokenId: tokenId,
+            owner: owner as string,
+            creator: creator,
+            isCreatorActive: isCreatorActive,
+            totalQueries: totalQueries,
+            pricePerQuery: pricePerQuery,
+            purchasePrice: purchasePrice,
+            isForSale: isForSale,
+            isOwned: isOwned || false,
+            ...hardcoded
+          });
+
+        } catch (error) {
+          console.warn(`Failed to fetch data for token ${tokenId}. Skipping.`, error);
+          // Skip this Echo if we can't fetch its data
+          continue;
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Failed to fetch all Echos:', error);
+    }
+
+    setAvailableEchos(foundEchos);
+    setIsScanning(false);
+  };
+
+
+  useEffect(() => {
     scanForAllEchos();
   }, []); 
 
+
+  const handleViewContent = (tokenId: bigint) => {
+    setViewingContentTokenId(tokenId);
+  };
+
+  if (viewingContentTokenId) {
+    return (
+      <EchoContentViewer 
+        tokenId={viewingContentTokenId} 
+        onBack={() => setViewingContentTokenId(null)}
+      />
+    );
+  }
 
   if (selectedTokenId) {
     return (
@@ -182,7 +400,10 @@ bigint[], string[], string[], `0x${string}`[], bigint[], boolean[]];        // P
         >
           ← Back to Echo Gallery
         </button>
-        <ChatInterface tokenId={selectedTokenId} />
+        <ChatInterface 
+          tokenId={selectedTokenId} 
+          isOwned={availableEchos.find(e => e.tokenId === Number(selectedTokenId))?.isOwned || false}
+        />
       </div>
     );
   }
@@ -234,7 +455,13 @@ bigint[], string[], string[], `0x${string}`[], bigint[], boolean[]];        // P
                 className="animate-slide-up"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <EchoCard echo={echo} onSelect={setSelectedTokenId} />
+                <EchoCard 
+                  echo={echo} 
+                  onSelect={setSelectedTokenId} 
+                  onBuy={handleEchoBuy}
+                  onViewContent={handleViewContent}
+                  isBuying={buyingTokenId === echo.tokenId && (isBuying || isBuyPending || isBuyTxPending || isApprovalTxPending)}
+                />
               </div>
             ))}
           </div>

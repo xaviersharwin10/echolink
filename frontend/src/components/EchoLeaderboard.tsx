@@ -91,16 +91,13 @@ export const EchoLeaderboard: React.FC = () => {
   const fetchEchoData = async () => {
     console.log("--- Starting fetchEchoData ---");
     try {
-      // --- Step 1: Get ALL Echo Metadata from Smart Contract (Wagmi) ---
-      const allEchoesData = await readContract({
+      // --- Step 1: Get Total Count and Individual Echo Data from Smart Contract (Wagmi) ---
+      const totalCount = Number(await readContract({
         address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
         abi: ECHO_NFT_ABI,
-        functionName: 'getAllEchoes',
-      }) as [
-        bigint[], string[], string[], `0x${string}`[], bigint[], boolean[]
-      ];
+        functionName: 'getTotalEchoes',
+      }) as bigint);
 
-      const [tokenIds, names, descriptions, creators, pricesPerQuery] = allEchoesData;
       const echoMetadataMap = new Map<number, { name: string; creator: string; price: number }>();
       console.log("echo",echoMetadataMap);
       
@@ -110,31 +107,46 @@ export const EchoLeaderboard: React.FC = () => {
       // Track Echos per creator and their price status for the new metric
       const creatorPriceTracker = new Map<string, { total: number; highValue: number }>();
 
-      tokenIds.forEach((id, i) => {
-        const tokenIdNumber = Number(id);
-        const price = Number(pricesPerQuery[i]) / (10 ** PYUSD_DECIMALS);
-        const creatorAddress = creators[i];
+      // Fetch individual Echo data for each token
+      for (let i = 1; i <= totalCount; i++) {
+        try {
+          const echoData = await readContract({
+            address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
+            abi: ECHO_NFT_ABI,
+            functionName: 'getEchoData',
+            args: [BigInt(i)],
+          }) as unknown as [string, string, `0x${string}`, bigint, boolean, bigint, boolean, `0x${string}`];
 
-        echoMetadataMap.set(tokenIdNumber, {
-          name: names[i],
-          creator: creatorAddress,
-          price: price,
-        });
+          const [name, description, creator, pricePerQuery, isActive, purchasePrice, isForSale, owner] = echoData;
+          const tokenIdNumber = i;
+          const price = Number(pricePerQuery) / (10 ** PYUSD_DECIMALS);
+          const creatorAddress = creator;
 
-        // Price Distribution Aggregation
-        const tier = currentPriceDistribution.find(t => price <= t.max) || currentPriceDistribution[currentPriceDistribution.length - 1];
-        tier.count++;
+          echoMetadataMap.set(tokenIdNumber, {
+            name: name,
+            creator: creatorAddress,
+            price: price,
+          });
 
-        // Creator Price Tracker Logic
-        if (!creatorPriceTracker.has(creatorAddress)) {
-            creatorPriceTracker.set(creatorAddress, { total: 0, highValue: 0 });
+          // Price Distribution Aggregation
+          const tier = currentPriceDistribution.find(t => price <= t.max) || currentPriceDistribution[currentPriceDistribution.length - 1];
+          tier.count++;
+
+          // Creator Price Tracker Logic
+          if (!creatorPriceTracker.has(creatorAddress)) {
+              creatorPriceTracker.set(creatorAddress, { total: 0, highValue: 0 });
+          }
+          const tracker = creatorPriceTracker.get(creatorAddress)!;
+          tracker.total++;
+          if (price >= HIGH_VALUE_THRESHOLD) {
+              tracker.highValue++;
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch data for token ${i}`, error);
+          // Skip this token and continue with the next one
+          continue;
         }
-        const tracker = creatorPriceTracker.get(creatorAddress)!;
-        tracker.total++;
-        if (price >= HIGH_VALUE_THRESHOLD) {
-            tracker.highValue++;
-        }
-      });
+      }
       
       const mintedCount = echoMetadataMap.size;
       setTotalEchosCount(mintedCount);

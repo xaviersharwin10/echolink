@@ -1,10 +1,10 @@
 // Contract configuration
 // Update this address after deploying your contract
-export const ECHOLNK_NFT_ADDRESS = "0x287b5a9EB0cAbDBD1860BCEF5f847C2958129FF4" as `0x${string}`;
+export const ECHOLNK_NFT_ADDRESS = "0x39bc7190911b9334560ADfEf4100f1bE515fa3e1" as `0x${string}`;
 export const QUERY_PAYMENTS_ADDRESS = "0xFf08e351Bf16fE0703108cf9B4AeDe3a16fd0a46" as `0x${string}`;
 
 export const QUERY_PAID_TOPIC = '0xad43474671daf07280e68edd7b27b2f40c4c24ea677afd418a3a407fa27f4058'; 
-export const CREDITS_USED_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+export const CREDITS_USED_TOPIC = '0x96abf1f8b2e2b9f059206032524684eca1a04e8fc3055a9be85331b004b8e5e2';
 
 export const ECHO_NFT_ABI = [
   {
@@ -34,6 +34,27 @@ export const ECHO_NFT_ABI = [
       { "indexed": false, "internalType": "uint256", "name": "pricePerQuery", "type": "uint256" }
     ],
     "name": "EchoUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "uint256", "name": "tokenId", "type": "uint256" },
+      { "indexed": true, "internalType": "address", "name": "buyer", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "seller", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "price", "type": "uint256" }
+    ],
+    "name": "EchoPurchased",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "internalType": "uint256", "name": "tokenId", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "price", "type": "uint256" },
+      { "indexed": false, "internalType": "bool", "name": "forSale", "type": "bool" }
+    ],
+    "name": "EchoListedForSale",
     "type": "event"
   },
   {
@@ -74,7 +95,6 @@ export const ECHO_NFT_ABI = [
   },
   {
     "inputs": [
-      { "internalType": "address", "name": "user", "type": "address" },
       { "internalType": "uint256", "name": "echoId", "type": "uint256" },
       { "internalType": "uint256", "name": "creditsToUse", "type": "uint256" }
     ],
@@ -89,7 +109,9 @@ export const ECHO_NFT_ABI = [
       { "internalType": "address", "name": "creator", "type": "address" },
       { "internalType": "string", "name": "name", "type": "string" },
       { "internalType": "string", "name": "description", "type": "string" },
-      { "internalType": "uint256", "name": "pricePerQuery", "type": "uint256" }
+      { "internalType": "uint256", "name": "pricePerQuery", "type": "uint256" },
+      { "internalType": "uint256", "name": "purchasePrice", "type": "uint256" },
+      { "internalType": "bool", "name": "isForSale", "type": "bool" }
     ],
     "name": "safeMint",
     "outputs": [
@@ -103,7 +125,9 @@ export const ECHO_NFT_ABI = [
       { "internalType": "uint256", "name": "tokenId", "type": "uint256" },
       { "internalType": "string", "name": "name", "type": "string" },
       { "internalType": "string", "name": "description", "type": "string" },
-      { "internalType": "uint256", "name": "pricePerQuery", "type": "uint256" }
+      { "internalType": "uint256", "name": "pricePerQuery", "type": "uint256" },
+      { "internalType": "uint256", "name": "purchasePrice", "type": "uint256" },
+      { "internalType": "bool", "name": "isForSale", "type": "bool" }
     ],
     "name": "updateEcho",
     "outputs": [],
@@ -121,14 +145,26 @@ export const ECHO_NFT_ABI = [
   },
   {
     "inputs": [],
-    "name": "getAllEchoes",
+    "name": "getTotalEchoes",
     "outputs": [
-      { "internalType": "uint256[]", "name": "tokenIds", "type": "uint256[]" },
-      { "internalType": "string[]", "name": "names", "type": "string[]" },
-      { "internalType": "string[]", "name": "descriptions", "type": "string[]" },
-      { "internalType": "address[]", "name": "creators", "type": "address[]" },
-      { "internalType": "uint256[]", "name": "pricesPerQuery", "type": "uint256[]" },
-      { "internalType": "bool[]", "name": "activeStatuses", "type": "bool[]" }
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getAllTokenIds",
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "",
+        "type": "uint256[]"
+      }
     ],
     "stateMutability": "view",
     "type": "function"
@@ -143,7 +179,10 @@ export const ECHO_NFT_ABI = [
       { "internalType": "string", "name": "description", "type": "string" },
       { "internalType": "address", "name": "creator", "type": "address" },
       { "internalType": "uint256", "name": "pricePerQuery", "type": "uint256" },
-      { "internalType": "bool", "name": "isActive", "type": "bool" }
+      { "internalType": "uint256", "name": "purchasePrice", "type": "uint256" },
+      { "internalType": "bool", "name": "isActive", "type": "bool" },
+      { "internalType": "bool", "name": "isForSale", "type": "bool" },
+      { "internalType": "address", "name": "owner", "type": "address" }
     ],
     "stateMutability": "view",
     "type": "function"
@@ -196,6 +235,93 @@ export const ECHO_NFT_ABI = [
     "inputs": [{ "internalType": "uint256", "name": "tokenId", "type": "uint256" }],
     "name": "tokenURI",
     "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_feePercent",
+        "type": "uint256"
+      }
+    ],
+    "name": "setProtocolFeePercent",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "buyEcho",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "forSale",
+        "type": "bool"
+      }
+    ],
+    "name": "setEchoForSale",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "getUserOwnedEchoCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "isEchoOwner",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   }
@@ -316,6 +442,19 @@ export const QUERY_PAYMENTS_ABI = [
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_feePercent",
+        "type": "uint256"
+      }
+    ],
+    "name": "setProtocolFeePercent",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {

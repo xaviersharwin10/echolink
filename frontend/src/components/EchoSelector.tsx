@@ -55,7 +55,7 @@ export const EchoSelector: React.FC = () => {
       if (!echoData || echoError) return null;
       if (!ownerData || ownerError) return null;
 
-      const [name, description, creator, pricePerQuery, isActive] = echoData as [string, string, `0x${string}`, bigint, boolean];
+      const [name, description, creator, pricePerQuery, isActive, purchasePrice, isForSale, ownerFromData] = echoData as unknown as [string, string, `0x${string}`, bigint, boolean, bigint, boolean, `0x${string}`];
       const owner = ownerData as string;
       console.log('🔍 Echo data:', { creator, owner, name, description, pricePerQuery, isActive });
       return { tokenId, creator, name, description, pricePerQuery, isActive, owner };

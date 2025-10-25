@@ -8,6 +8,8 @@ interface MintEchoProps {
   echoName?: string;
   echoDescription?: string;
   pricePerQuery?: string;
+  purchasePrice?: string;
+  isForSale?: boolean;
   onMintComplete?: () => void;
 }
 
@@ -15,12 +17,16 @@ export const MintEcho: React.FC<MintEchoProps> = ({
   tokenId: propTokenId,
   echoName: propEchoName, 
   echoDescription: propEchoDescription, 
-  pricePerQuery: propPricePerQuery, 
+  pricePerQuery: propPricePerQuery,
+  purchasePrice: propPurchasePrice,
+  isForSale: propIsForSale,
   onMintComplete 
 }) => {
   const [echoName, setEchoName] = useState(propEchoName || '');
   const [echoDescription, setEchoDescription] = useState(propEchoDescription || '');
   const [pricePerQuery, setPricePerQuery] = useState(propPricePerQuery || '0.1');
+  const [purchasePrice, setPurchasePrice] = useState(propPurchasePrice || '50.0');
+  const [isForSale, setIsForSale] = useState(propIsForSale !== undefined ? propIsForSale : true);
   const { address } = useAccount();
   const chainId = useChainId();
   const { openTxToast } = useNotification();
@@ -54,11 +60,12 @@ export const MintEcho: React.FC<MintEchoProps> = ({
     // Use provided token ID or generate a default one
     const tokenIdToUse = BigInt(propTokenId || Date.now().toString());
     
-    // Convert price to wei (assuming 6 decimals for PYUSD)
+    // Convert prices to wei (assuming 6 decimals for PYUSD)
     const priceInWei = BigInt(Math.floor(parseFloat(pricePerQuery) * 1000000));
+    const purchasePriceInWei = BigInt(Math.floor(parseFloat(purchasePrice) * 1000000));
     
     write({
-      args: [tokenIdToUse, address, echoName, echoDescription, priceInWei],
+      args: [tokenIdToUse, address, echoName, echoDescription, priceInWei, purchasePriceInWei, isForSale],
     });
   };
 
@@ -112,6 +119,42 @@ export const MintEcho: React.FC<MintEchoProps> = ({
               />
               <p className="text-sm text-gray-500 mt-1">
                 Users will pay this amount in PYUSD for each query
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Purchase Price (PYUSD)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={purchasePrice}
+                onChange={(e) => setPurchasePrice(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!address}
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                Price for users to buy the entire Echo (unlimited access)
+              </p>
+            </div>
+
+            <div>
+              <label className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  checked={isForSale}
+                  onChange={(e) => setIsForSale(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  disabled={!address}
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  List Echo for Sale
+                </span>
+              </label>
+              <p className="text-sm text-gray-500 mt-1 ml-7">
+                Allow users to purchase unlimited access to this Echo
               </p>
             </div>
           </>

@@ -8,32 +8,7 @@ const API_BASE_URL = 'https://eth-sepolia.blockscout.com/api/v2';
 const ACTIVITY_THRESHOLD = 3;
 const PYUSD_TOKEN_ADDRESS = '0xCaC524BcA292aaade2DF8A05cC58F0a65B1B3bB9';
 
-const featuredEchos: { [key: number]: { name: string; description: string; imageUrl: string; category: string } } = {
-  1: { 
-    name: "Economic Principles", 
-    description: "Master foundational economic theories and models with interactive AI guidance.", 
-    imageUrl: "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?w=800",
-    category: "Economics"
-  },
-  2: { 
-    name: "The Startup Playbook", 
-    description: "Learn from Silicon Valley's most successful founders and their strategies.", 
-    imageUrl: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=800",
-    category: "Business"
-  },
-  3: { 
-    name: "History of Rome", 
-    description: "Explore the rise and fall of the Roman Empire with interactive historical insights.", 
-    imageUrl: "https://images.unsplash.com/photo-1589191224392-a9a358a98a83?w=800",
-    category: "History"
-  },
-  4: { 
-    name: "Quantum Physics AI", 
-    description: "Dive into the fascinating world of quantum mechanics and modern physics.", 
-    imageUrl: "https://images.unsplash.com/photo-1593352222493-26a96c6344b9?w=800",
-    category: "Science"
-  },
-};
+// Removed hardcoded featuredEchos - now using actual Echo data from blockchain
 
 interface EchoDashboardProps {
   onNavigate: (tab: 'dashboard' | 'mint' | 'gallery' | 'credits' | 'leaderboard') => void;
@@ -55,35 +30,40 @@ export const EchoDashboard: React.FC<EchoDashboardProps> = ({ onNavigate }) => {
       const foundEchos: EchoInfo[] = [];
 
       try {
-        // Get all Echos from the contract
-        const allEchoesData = await readContract({
+        // Get total count of Echos from the contract
+        const totalCount = Number(await readContract({
           address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
           abi: ECHO_NFT_ABI,
-          functionName: 'getAllEchoes',
-        });
-
-        const [tokenIds, names, descriptions, creators, pricesPerQuery, activeStatuses] = allEchoesData as [
-          bigint[], string[], string[], `0x${string}`[], bigint[], boolean[]];
+          functionName: 'getTotalEchoes',
+        }) as bigint);
 
         let totalQueries = 0;
         let activeUsers = 0;
 
-        // Process featured echos (limit to 4 for dashboard)
-        for (let i = 0; i < Math.min(tokenIds.length, 4); i++) {
-          const tokenId = Number(tokenIds[i]);
-          const name = names[i];
-          const description = descriptions[i];
-          const creator = creators[i];
-          const pricePerQuery = pricesPerQuery[i];
-          const isActive = activeStatuses[i];
+        // Get all actual token IDs that exist (same as EchoGallery)
+        const allTokenIds = await readContract({
+          address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
+          abi: ECHO_NFT_ABI,
+          functionName: 'getAllTokenIds',
+        }) as bigint[];
 
+        console.log(`🔍 Dashboard: Found ${allTokenIds.length} actual token IDs:`, allTokenIds.map(id => Number(id)));
+        
+        // Process featured echos (limit to 4 for dashboard)
+        const featuredTokenIds = allTokenIds.slice(0, 4); // Take first 4 actual token IDs
+        
+        for (const tokenIdBigInt of featuredTokenIds) {
+          const tokenId = Number(tokenIdBigInt);
           try {
-            const owner = await readContract({
+            // Get individual Echo data
+            const echoData = await readContract({
               address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
               abi: ECHO_NFT_ABI,
-              functionName: 'ownerOf',
+              functionName: 'getEchoData',
               args: [BigInt(tokenId)],
-            });
+            }) as unknown as [string, string, `0x${string}`, bigint, boolean, bigint, boolean, `0x${string}`];
+
+            const [name, description, creator, pricePerQuery, isActive, purchasePrice, isForSale, owner] = echoData;
 
             const activityRes = await fetch(`${API_BASE_URL}/addresses/${creator}/token-transfers?token=${PYUSD_TOKEN_ADDRESS}`);
             const activityData = await activityRes.json();
@@ -93,13 +73,7 @@ export const EchoDashboard: React.FC<EchoDashboardProps> = ({ onNavigate }) => {
             totalQueries += queries;
             if (queries > ACTIVITY_THRESHOLD) activeUsers++;
 
-            const hardcoded = featuredEchos[tokenId] || {
-              name: name || `Echo #${tokenId}`,
-              description: description || "An AI entity containing unique knowledge, ready for exploration.",
-              imageUrl: `https://source.unsplash.com/random/800x600?sig=${tokenId}`,
-              category: "General"
-            };
-            
+            // Use actual Echo data instead of hardcoded data
             foundEchos.push({
               tokenId: tokenId,
               owner: owner as string,
@@ -107,32 +81,24 @@ export const EchoDashboard: React.FC<EchoDashboardProps> = ({ onNavigate }) => {
               isCreatorActive: queries > ACTIVITY_THRESHOLD,
               totalQueries: queries,
               pricePerQuery: pricePerQuery,
-              ...hardcoded
-            });
-
-          } catch (error) {
-            console.warn(`Failed to fetch data for token ${tokenId}`, error);
-            const hardcoded = featuredEchos[tokenId] || {
+              purchasePrice: purchasePrice,
+              isForSale: isForSale,
+              isOwned: false, // Dashboard doesn't check ownership
               name: name || `Echo #${tokenId}`,
               description: description || "An AI entity containing unique knowledge, ready for exploration.",
               imageUrl: `https://source.unsplash.com/random/800x600?sig=${tokenId}`,
               category: "General"
-            };
-            
-            foundEchos.push({
-              tokenId: tokenId,
-              owner: creator,
-              creator: creator,
-              isCreatorActive: false,
-              totalQueries: 0,
-              pricePerQuery: pricePerQuery,
-              ...hardcoded
             });
+
+          } catch (error) {
+            console.warn(`Failed to fetch data for token ${tokenId}`, error);
+            // Skip this token and continue with the next one
+            continue;
           }
         }
 
         setStats({
-          totalEchos: tokenIds.length,
+          totalEchos: totalCount,
           activeUsers: activeUsers,
           totalQueries: totalQueries
         });
@@ -152,7 +118,12 @@ export const EchoDashboard: React.FC<EchoDashboardProps> = ({ onNavigate }) => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-600 mx-auto mb-4"></div>
+               <img
+                 src="/echolink_logo.png"
+                 alt="EchoLink Logo"
+                 className="h-20 w-20 object-contain mx-auto mb-4 animate-pulse brightness-110 contrast-110"
+               />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-4 border-indigo-600 mx-auto mb-4"></div>
           <p className="text-gray-600 text-lg">Loading EchoLink Dashboard...</p>
         </div>
       </div>
@@ -166,9 +137,16 @@ export const EchoDashboard: React.FC<EchoDashboardProps> = ({ onNavigate }) => {
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-indigo-600/10"></div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
           <div className="text-center">
-            <h1 className="text-5xl lg:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700 mb-6 animate-fade-in">
-              Welcome to EchoLink
-            </h1>
+            <div className="flex justify-center items-center mb-6">
+           <img
+             src="/echolink_logo.png"
+             alt="EchoLink Logo"
+             className="h-24 w-24 object-contain mr-6 animate-fade-in drop-shadow-2xl hover:drop-shadow-3xl transition-all duration-500 hover:scale-110 brightness-110 contrast-110"
+           />
+              <h1 className="text-5xl lg:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700 animate-fade-in">
+                EchoLink
+              </h1>
+            </div>
             <p className="text-xl lg:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto animate-fade-in-delay">
               The Celestial Library for Web3 Knowledge • Transform your expertise into AI-powered Echo NFTs
             </p>
@@ -185,9 +163,9 @@ export const EchoDashboard: React.FC<EchoDashboardProps> = ({ onNavigate }) => {
 
             {isConnected && (
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl max-w-md mx-auto animate-slide-up">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">🎉 Welcome Back!</h3>
-                <p className="text-gray-600 mb-4">Ready to explore the knowledge universe?</p>
-                <div className="flex gap-3">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">🎉 Welcome Back!</h3>
+                <p className="text-gray-600 mb-4 text-center">Ready to explore the knowledge universe?</p>
+                <div className="flex gap-3 justify-center">
                   <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-2 rounded-lg font-semibold text-sm">
                     ✅ Connected
                   </div>
@@ -238,7 +216,7 @@ export const EchoDashboard: React.FC<EchoDashboardProps> = ({ onNavigate }) => {
         </div>
 
         {featuredEchoList.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 items-stretch">
             {featuredEchoList.map((echo, index) => (
               <div 
                 key={echo.tokenId} 

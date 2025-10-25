@@ -94,7 +94,7 @@ class IntelligentQueryEngine:
             logger.info("🧠 Initializing Knowledge Agent components...")
             
             # Initialize LLM
-            self.llm = ASIOneLLM(api_key="sk_941e448a52494b6298cfd3af219c81b120469ca2583042988c5747ce2e8ae036")
+            self.llm = ASIOneLLM(api_key="")
             logger.info("✅ LLM initialized")
             
             # Initialize MeTTa
@@ -164,12 +164,15 @@ class IntelligentQueryEngine:
             # Try to load from knowledge_bases first
             faiss_file = knowledge_bases_path / f"fact_index_{token_id}.faiss"
             mapping_file = knowledge_bases_path / f"fact_mapping_{token_id}.json"
+            knowledge_file = knowledge_bases_path / f"knowledge_base_{token_id}.db"
             
             # If not in knowledge_bases, try root directory
             if not faiss_file.exists():
                 faiss_file = Path(f"fact_index_{token_id}.faiss")
                 mapping_file = Path(f"fact_mapping_{token_id}.json")
+                knowledge_file = Path(f"knowledge_base_{token_id}.db")
             
+            # Load FAISS index
             if faiss_file.exists():
                 self.faiss_index = faiss.read_index(str(faiss_file))
                 logger.info(f"📚 Loaded FAISS index for token {token_id}: {faiss_file.name}")
@@ -177,6 +180,7 @@ class IntelligentQueryEngine:
                 logger.warning(f"⚠️ No FAISS index found for token {token_id}")
                 self.faiss_index = None
             
+            # Load fact mapping
             if mapping_file.exists():
                 with open(mapping_file, 'r') as f:
                     self.fact_mapping = json.load(f)
@@ -184,6 +188,43 @@ class IntelligentQueryEngine:
             else:
                 logger.warning(f"⚠️ No fact mapping found for token {token_id}")
                 self.fact_mapping = {}
+            
+            # Load MeTTa knowledge graph and add query predicates
+            if knowledge_file.exists():
+                with open(knowledge_file, 'r') as f:
+                    knowledge_data = json.load(f)
+                    atoms = knowledge_data.get('atoms', [])
+                    
+                    # Create fresh MeTTa interpreter for this token
+                    self.metta = MeTTa()
+                    
+                    # Add all atoms
+                    for atom in atoms:
+                        try:
+                            self.metta.run(f'!(add-atom &self {atom})')
+                        except Exception as e:
+                            logger.warning(f"Failed to add atom '{atom}': {e}")
+                    
+                    # Add query predicates (same as ingest.py)
+                    self.metta.run("""
+                    !(add-atom &self
+                        (= (query $relation $subject)
+                            (match &self
+                            ($relation $subject $object)
+                            $object)))
+                    """)
+                    
+                    self.metta.run("""
+                    !(add-atom &self
+                        (= (query-inverse $relation $object)
+                            (match &self
+                            ($relation $subject $object)
+                            $subject)))
+                    """)
+                    
+                    logger.info(f"🧠 Loaded {len(atoms)} MeTTa atoms with query predicates")
+            else:
+                logger.warning(f"⚠️ No MeTTa knowledge graph found for token {token_id}")
                 
         except Exception as e:
             logger.error(f"❌ Failed to load knowledge base for token {token_id}: {e}")
@@ -204,10 +245,12 @@ class IntelligentQueryEngine:
             logger.info(f"🔍 Processing query for token {token_id}: {query}")
             
             # Step 1: Vector similarity search
-            relevant_facts = await self._vector_search(query)
-            logger.info(f"📊 Found {len(relevant_facts)} relevant facts")
+            search_results = await self._vector_search(query)
+            relevant_facts = search_results["facts"]
+            relevant_triples = search_results["triples"]
+            logger.info(f"📊 Found {len(relevant_facts)} relevant facts and {len(relevant_triples)} triples")
             
-            # Early return if no relevant facts found (same as intelligent_agent.py)
+            # Early return if no relevant facts found
             if not relevant_facts:
                 return {
                     "success": True,
@@ -216,8 +259,8 @@ class IntelligentQueryEngine:
                     "processing_time_ms": (time.time() - start_time) * 1000
                 }
             
-            # Step 2: MeTTa reasoning
-            reasoning_result = await self._metta_reasoning(query, relevant_facts)
+            # Step 2: MeTTa reasoning with triples
+            reasoning_result = await self._metta_reasoning(query, relevant_facts, relevant_triples)
             logger.info(f"🧠 MeTTa reasoning completed")
             
             # Step 3: LLM synthesis
@@ -243,10 +286,10 @@ class IntelligentQueryEngine:
                 "processing_time_ms": (time.time() - start_time) * 1000
             }
     
-    async def _vector_search(self, query: str, top_k: int = 5) -> List[str]:
-        """Perform vector similarity search"""
+    async def _vector_search(self, query: str, top_k: int = 5):
+        """Perform vector similarity search, return facts and triples"""
         if not self.faiss_index or not self.fact_mapping:
-            return []
+            return {"facts": [], "triples": []}
         
         try:
             # Encode query
@@ -256,49 +299,110 @@ class IntelligentQueryEngine:
             scores, indices = self.faiss_index.search(query_vector, top_k)
             logger.info(f"🔍 Vector search results: {len(scores[0])} candidates")
             
-            # Retrieve relevant facts
+            # Retrieve relevant facts and triples
             relevant_facts = []
+            relevant_triples = []
+            
             for i, (score, idx) in enumerate(zip(scores[0], indices[0])):
                 logger.info(f"  {i+1}. Score: {score:.3f}, Index: {idx}")
                 if score > 0.2:  # Threshold for relevance
                     if 'facts' in self.fact_mapping and idx < len(self.fact_mapping['facts']):
                         fact = self.fact_mapping['facts'][idx]
                         relevant_facts.append(fact)
+                        
+                        # Also get the corresponding triple
+                        if 'triples' in self.fact_mapping and idx < len(self.fact_mapping['triples']):
+                            triple = self.fact_mapping['triples'][idx]
+                            relevant_triples.append(triple)
+                        
                         logger.info(f"    ✅ Added fact: {fact[:100]}...")
                     else:
                         logger.warning(f"    ❌ Index {idx} out of bounds or no facts array")
                 else:
                     logger.info(f"    ⚠️ Score {score:.3f} below threshold 0.3")
             
-            return relevant_facts
+            return {"facts": relevant_facts, "triples": relevant_triples}
             
         except Exception as e:
             logger.error(f"❌ Vector search failed: {e}")
-            return []
+            return {"facts": [], "triples": []}
     
-    async def _metta_reasoning(self, query: str, facts: List[str]) -> str:
-        """Perform MeTTa reasoning on the query and facts"""
+    async def _metta_reasoning(self, query: str, facts: List[str], triples: List[Dict]) -> str:
+        """Perform MeTTa reasoning using query predicates on loaded atoms"""
         try:
             if not self.metta:
                 return "MeTTa reasoning not available"
             
-            # Prepare MeTTa program
-            metta_program = f"""
-            ; Query: {query}
-            ; Facts: {json.dumps(facts[:3])}  ; Limit to top 3 facts for reasoning
+            # Extract entities and relations from triples
+            entities = set()
+            relations = set()
             
-            ; Simple reasoning pattern
-            (if (and (contains-fact $facts $query) (relevant $fact $query))
-                (then (answer $query $fact)))
-            """
+            for triple in triples:
+                entities.add(triple.get('subject', ''))
+                relations.add(triple.get('relation', ''))
             
-            # Execute MeTTa reasoning
-            result = self.metta.run(metta_program)
+            logger.info(f"📊 Found {len(entities)} entities and {len(relations)} relations for MeTTa queries")
             
-            if result:
-                return str(result)
+            # Generate dynamic MeTTa queries
+            metta_results = []
+            
+            # Query top entities with their relations
+            for entity in list(entities)[:5]:  # Top 5 entities
+                for relation in list(relations)[:3]:  # Top 3 relations per entity
+                    query_str = f"!(query {relation} {entity})"
+                    try:
+                        result = self.metta.run(query_str)
+                        if result and len(result) > 0:
+                            if isinstance(result[0], list) and len(result[0]) > 0:
+                                answer = str(result[0][0])
+                            else:
+                                answer = str(result[0])
+                            
+                            if answer and answer != '[]' and 'Empty' not in answer:
+                                metta_results.append({
+                                    'entity': entity,
+                                    'relation': relation,
+                                    'value': answer.replace('[', '').replace(']', '').strip()
+                                })
+                                logger.info(f"✅ MeTTa query found: {relation}({entity}) = {answer}")
+                    except Exception as e:
+                        logger.warning(f"MeTTa query '{query_str}' failed: {e}")
+                        continue
+            
+            # Add inverse queries for "who/what" questions
+            if 'who' in query.lower() or 'what' in query.lower() or 'which' in query.lower():
+                for relation in list(relations)[:3]:
+                    for entity in list(entities)[:2]:
+                        inverse_query = f"!(query-inverse {relation} {entity})"
+                        try:
+                            result = self.metta.run(inverse_query)
+                            if result and len(result) > 0:
+                                if isinstance(result[0], list) and len(result[0]) > 0:
+                                    answer = str(result[0][0])
+                                else:
+                                    answer = str(result[0])
+                                
+                                if answer and answer != '[]' and 'Empty' not in answer:
+                                    metta_results.append({
+                                        'relation': relation,
+                                        'object': entity,
+                                        'subject': answer.replace('[', '').replace(']', '').strip()
+                                    })
+                                    logger.info(f"✅ MeTTa inverse query found: {relation}^-1({entity}) = {answer}")
+                        except Exception as e:
+                            logger.warning(f"MeTTa inverse query '{inverse_query}' failed: {e}")
+                            continue
+            
+            if metta_results:
+                logger.info(f"🎯 MeTTa reasoning found {len(metta_results)} structured answers")
+                return json.dumps({
+                    'reasoning_type': 'MeTTa query results',
+                    'results': metta_results,
+                    'count': len(metta_results)
+                })
             else:
-                return "No specific reasoning pattern matched"
+                logger.info("⚠️ No MeTTa reasoning matches found")
+                return "No MeTTa reasoning matches found"
                 
         except Exception as e:
             logger.error(f"❌ MeTTa reasoning failed: {e}")

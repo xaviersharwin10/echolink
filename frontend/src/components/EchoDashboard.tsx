@@ -131,7 +131,7 @@ export const EchoDashboard: React.FC<EchoDashboardProps> = ({ onNavigate }) => {
             aggregatedTotalQueries += totalQueries;
             
             // Determine activity for this creator and update global stats
-            const isCreatorActive = totalQueries > ACTIVITY_THRESHOLD;
+            const isCreatorActive = totalQueries >= ACTIVITY_THRESHOLD;
             if (isCreatorActive && !processedCreators.has(creator)) {
                 activeCreatorsCount++;
                 processedCreators.add(creator);

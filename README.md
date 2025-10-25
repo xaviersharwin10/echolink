@@ -96,6 +96,12 @@ EchoLink provides comprehensive blockchain analytics powered by Blockscout:
 - **Natural Language Queries**: Ask questions like "What's the highest performing Echo?" and get AI-reasoned answers
 - **On-Chain Intelligence**: Uses MCP tools (read_contract, get_address_info, get_token_transfers) for comprehensive blockchain analysis
 
+**Leaderboard Analytics**
+- **Real-Time Rankings**: Dynamic leaderboard showing top-performing Echos and creators based on on-chain data
+- **Blockscout Integration**: Fetches event logs (QueryPaid, CreditsUsed) directly from Blockscout MCP/API
+- **Creator Statistics**: Tracks earnings, query volume, and transaction history for each creator
+- **Price Distribution**: Visualizes knowledge pricing tiers across all Echos
+
 **User Experience**
 - **Transaction Tracking**: Real-time notifications via Blockscout SDK keep users informed of payment status
 - **Explorer Integration**: Seamless links to Blockscout explorer for transaction verification

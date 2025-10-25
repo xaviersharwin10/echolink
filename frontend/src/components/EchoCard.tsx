@@ -86,7 +86,7 @@ export const EchoCard: React.FC<EchoCardProps> = ({ echo, onSelect, onBuy, onVie
           {/* Price per Query */}
           <div className="text-center">
             <p className="text-2xl font-extrabold text-green-700 transition-transform duration-300 group-hover:scale-110">
-              ${formattedPrice}
+              {pricePerQuery === BigInt(0) ? 'Free' : `$${formattedPrice}`}
             </p>
             <p className="text-xs font-semibold uppercase text-gray-500 tracking-wider">
               Per Query
@@ -102,12 +102,19 @@ export const EchoCard: React.FC<EchoCardProps> = ({ echo, onSelect, onBuy, onVie
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
               {isOwned ? 'Owner' : 'Creator'}
             </p>
-            {isCreatorActive && <ActiveCreatorBadge />}
-            {isOwned && (
-              <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                👑 You Own This
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {pricePerQuery === BigInt(0) && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  🆓 Free
+                </span>
+              )}
+              {isCreatorActive && <ActiveCreatorBadge />}
+              {isOwned && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  👑 You Own This
+                </span>
+              )}
+            </div>
           </div>
           <p
             className="text-sm font-mono text-gray-700 truncate hover:text-gray-900 transition-colors duration-300"

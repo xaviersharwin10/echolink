@@ -12,6 +12,7 @@ interface EchoConfig {
   pricePerQuery: string;
   purchasePrice: string;
   isForSale: boolean;
+  isFreeEcho: boolean;
 }
 
 interface ProcessingResult {
@@ -34,9 +35,10 @@ export const CreatorStudio: React.FC = () => {
   const [echoConfig, setEchoConfig] = useState<EchoConfig>({
     name: '',
     description: '',
-    pricePerQuery: '0.1',
+    pricePerQuery: '0.1', // Default price
     purchasePrice: '50.0',
-    isForSale: true
+    isForSale: true,
+    isFreeEcho: false // Default to paid
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -191,7 +193,7 @@ export const CreatorStudio: React.FC = () => {
     setUploadedFile(null);
     setProcessingResult(null);
     setOriginalFileData(null);
-    setEchoConfig({ name: '', description: '', pricePerQuery: '0.1', purchasePrice: '50.0', isForSale: true });
+    setEchoConfig({ name: '', description: '', pricePerQuery: '0.1', purchasePrice: '50.0', isForSale: true, isFreeEcho: false });
     setError(null);
   };
 
@@ -200,7 +202,7 @@ export const CreatorStudio: React.FC = () => {
     setUploadedFile(null);
     setProcessingResult(null);
     setOriginalFileData(null);
-    setEchoConfig({ name: '', description: '', pricePerQuery: '0.1', purchasePrice: '50.0', isForSale: true });
+    setEchoConfig({ name: '', description: '', pricePerQuery: '0.1', purchasePrice: '50.0', isForSale: true, isFreeEcho: false });
     setError(null);
     setIsProcessing(false);
   };
@@ -391,40 +393,73 @@ export const CreatorStudio: React.FC = () => {
                 />
               </div>
 
+              {/* Make Echo Free Toggle */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Price per Query (PYUSD)
+                <label className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    checked={echoConfig.isFreeEcho}
+                    onChange={(e) => {
+                      const isFree = e.target.checked;
+                      setEchoConfig(prev => ({ 
+                        ...prev, 
+                        isFreeEcho: isFree,
+                        pricePerQuery: isFree ? '0' : '0.1',
+                        isForSale: isFree ? false : prev.isForSale // Disable sale for free Echos
+                      }));
+                    }}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    🆓 Make Echo Free
+                  </span>
                 </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={echoConfig.pricePerQuery}
-                  onChange={(e) => setEchoConfig(prev => ({ ...prev, pricePerQuery: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  Users will pay this amount in PYUSD for each query
+                <p className="text-sm text-gray-500 mt-1 ml-7">
+                  {echoConfig.isFreeEcho 
+                    ? 'This Echo will be free for all users to query' 
+                    : 'Users will pay to query this Echo'}
                 </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Purchase Price (PYUSD)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={echoConfig.purchasePrice}
-                  onChange={(e) => setEchoConfig(prev => ({ ...prev, purchasePrice: e.target.value }))}
-                  placeholder="50.00"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  Price for users to buy and own this Echo (set to 0 to make it not for sale)
-                </p>
-              </div>
+              {/* Price Input - Only show when not free */}
+              {!echoConfig.isFreeEcho && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Price per Query (PYUSD)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={echoConfig.pricePerQuery}
+                    onChange={(e) => setEchoConfig(prev => ({ ...prev, pricePerQuery: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Users will pay this amount in PYUSD for each query
+                  </p>
+                </div>
+              )}
+
+              {echoConfig.isForSale && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Purchase Price (PYUSD)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={echoConfig.purchasePrice}
+                    onChange={(e) => setEchoConfig(prev => ({ ...prev, purchasePrice: e.target.value }))}
+                    placeholder="50.00"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Price for users to buy and own this Echo
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="flex items-center space-x-3">

@@ -86,6 +86,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId, isOwned =
   // echoData returns a tuple: [name: string, description: string, creator: address, pricePerQuery: uint256, isActive: bool, purchasePrice: uint256, isForSale: bool, owner: address]
   const [echoName, echoDescription, creatorAddress, pricePerQuery, isActive, purchasePrice, isForSale, owner] = (echoData as unknown as [string, string, string, bigint, boolean, bigint, boolean, string]) || [undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
   console.log('🔍 Echo data:', { echoName, echoDescription, creatorAddress, pricePerQuery, isActive });
+  
+  // Check if this is a free Echo
+  const isFreeEcho = pricePerQuery !== undefined && pricePerQuery === BigInt(0);
+  console.log('🆓 Is free Echo:', isFreeEcho, 'pricePerQuery:', pricePerQuery);
 
   // ✅ Read PYUSD balance
   const { data: pyusdBalance, refetch: refetchBalance } = useContractRead({
@@ -354,9 +358,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId, isOwned =
     setInput('');
     setIsLoading(true);
 
-    // ✅ Skip payment for owned Echos
-    if (isOwned) {
-      console.log('👑 User owns this Echo - skipping payment');
+    // ✅ Skip payment for owned Echos or free Echos
+    if (isOwned || isFreeEcho) {
+      const reason = isOwned ? 'User owns this Echo' : 'Echo is free';
+      console.log(`👑 ${reason} - skipping payment`);
       try {
         const response = await fetch('http://localhost:3001/query', {
           method: 'POST',
@@ -551,7 +556,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId, isOwned =
                   </div>
                   <div className="flex items-center">
                     <span className="text-sm font-medium text-gray-600 w-20">Price:</span>
-                    <span className="font-semibold text-green-600">{pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)} PYUSD` : 'Loading...'}</span>
+                    <span className="font-semibold text-green-600">
+                      {isFreeEcho 
+                        ? 'Free' 
+                        : pricePerQuery 
+                          ? `${(Number(pricePerQuery) / 1000000).toFixed(2)} PYUSD` 
+                          : 'Loading...'}
+                    </span>
                   </div>
                 </div>
                 <div className="space-y-3">
@@ -588,7 +599,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId, isOwned =
                   <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
                     <div className="text-sm text-blue-600 mb-1">PYUSD Balance</div>
                     <div className="text-xl font-bold text-blue-800">
-                      {formatBalance(pyusdBalance as bigint)} PYUSD
+                      {pyusdBalance ? formatBalance(pyusdBalance as bigint) : '0.00'} PYUSD
                     </div>
                   </div>
                   <div className="bg-green-50 rounded-xl p-4 border border-green-200">
@@ -600,7 +611,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId, isOwned =
                   <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
                     <div className="text-sm text-purple-600 mb-1">Allowance</div>
                     <div className="text-xl font-bold text-purple-800">
-                      {formatBalance(currentAllowance as bigint)} PYUSD
+                      {currentAllowance ? formatBalance(currentAllowance as bigint) : '0.00'} PYUSD
                     </div>
                   </div>
                 </div>
@@ -611,8 +622,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId, isOwned =
             </div>
           )}
 
-          {/* Payment Method Selector - Only show for non-owned Echos */}
-          {address && !isOwned && (
+          {/* Payment Method Selector - Only show for non-owned and non-free Echos */}
+          {address && !isOwned && !isFreeEcho && (
             <div className="mb-8 animate-fade-in-delay-2">
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-purple-200/50">
                 <div className="flex items-center mb-4">
@@ -725,7 +736,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId, isOwned =
                     <div className="text-sm text-gray-400">
                       {isOwned 
                         ? 'Unlimited queries - no payment required!' 
-                        : `Each query costs ${pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)}` : '0.1'} PYUSD`
+                        : isFreeEcho
+                          ? 'This Echo is free to query! 🆓'
+                          : `Each query costs ${pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)}` : '0.1'} PYUSD`
                       }
                     </div>
                   </div>
@@ -802,9 +815,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ tokenId, isOwned =
                 {isLoading ? 'Processing...' : 
                   isOwned 
                     ? 'Send (Unlimited Access)' 
-                    : paymentMethod === 'credits' 
-                      ? `Send (${Math.ceil((pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1) * 100)} credits)`
-                      : `Send (${pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)}` : '0.1'} PYUSD)`
+                    : isFreeEcho
+                      ? 'Send'
+                      : paymentMethod === 'credits' 
+                        ? `Send (${Math.ceil((pricePerQuery ? Number(pricePerQuery) / 1000000 : 0.1) * 100)} credits)`
+                        : `Send (${pricePerQuery ? `${(Number(pricePerQuery) / 1000000).toFixed(2)}` : '0.1'} PYUSD)`
                 }
               </button>
             </form>

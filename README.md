@@ -1,10 +1,10 @@
 # EchoLink - Decentralized Knowledge Marketplace 🌐🧠
 
-**EchoLink** is a revolutionary decentralized knowledge marketplace that combines blockchain technology with advanced AI agents to enable knowledge creators to monetize their expertise through interactive Echo NFTs. Built for **ETHOnline 2025**.
+**EchoLink** Decentralized Knowledge Marketplace. Mint your content (books, papers) as AI Echo NFTs powered by ASI uAgents and MeTTa graphs. Earn PYUSD micro-payments directly from users who query your Echo for verifiable insights, with all usage transparently tracked on Blockscout. Built for **ETHOnline 2025**.
 
 ## 🌟 Overview
 
-EchoLink: Decentralized Knowledge Marketplace. Mint your content (books, papers) as AI Echo NFTs powered by ASI uAgents and MeTTa graphs. Earn PYUSD micro-payments directly from users who query your Echo for verifiable insights, with all usage transparently tracked on Blockscout. Built for ETHOnline 2025.
+EchoLink is a production-ready decentralized knowledge marketplace that revolutionizes how knowledge is created, owned, and accessed. Creators upload content (text, PDF, video, audio), which is automatically processed into structured knowledge graphs and minted as interactive Echo NFTs. Users can query these Echos using natural language, with flexible payment options including pay-per-query, credit subscriptions, and full ownership purchases.
 
 The platform delivers a scalable real-world solution for knowledge monetization, combining blockchain ownership, multi-agent AI systems, and seamless payments to create new economic opportunities in the creator economy.
 

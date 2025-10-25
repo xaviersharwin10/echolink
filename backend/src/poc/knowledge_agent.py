@@ -409,37 +409,72 @@ class IntelligentQueryEngine:
             return f"MeTTa reasoning error: {str(e)}"
     
     async def _llm_synthesis(self, query: str, facts: List[str], reasoning: str) -> str:
-        """Synthesize final answer using LLM"""
+        """Synthesize final answer using LLM with advanced prompt engineering"""
         try:
             if not self.llm:
                 return "LLM not available for synthesis"
             
-            # Prepare context
-            context = {
-                "query": query,
-                "relevant_facts": facts[:10],  # Limit to top 5 facts
-                "reasoning": reasoning
-            }
+            # Parse MeTTa reasoning results if available
+            try:
+                metta_data = json.loads(reasoning) if reasoning and reasoning.startswith('{') else None
+                metta_results = metta_data.get('results', []) if metta_data and 'results' in metta_data else None
+            except:
+                metta_results = None
             
-            # Create prompt
-            prompt = f"""
-            Based on the following information, provide a comprehensive answer to the user's query.
-            
-            Query: {query}
-            
-            Relevant Facts:
-            {json.dumps(facts[:5], indent=2)}
-            
-            Reasoning Analysis:
-            {reasoning}
-            
-            Please provide a clear, accurate, and helpful answer based on the cavailable information.
-            """
+            # Create optimized prompt
+            prompt = f"""You are an intelligent knowledge assistant for EchoLink, a decentralized knowledge marketplace powered by AI.
+
+## USER QUERY
+{query}
+
+## CONTEXT ANALYSIS
+
+### Semantic Search Results (Top 5 Most Relevant Facts):
+{chr(10).join([f"{i+1}. {fact}" for i, fact in enumerate(facts[:5])])}
+
+### MeTTa Knowledge Graph Query Results:
+{chr(10).join([f"- {result.get('relation', 'Unknown')}: {result.get('entity', 'Unknown')} → {result.get('value', result.get('subject', 'Unknown'))}" for result in metta_results[:10]]) if metta_results else "No structured knowledge graph results available"}
+
+## TASK
+Synthesize a comprehensive, accurate, and conversational answer by:
+
+1. **Direct Answer First**: Lead with the most direct answer to the user's question
+2. **Evidence-Based**: Ground your response in the facts and knowledge graph results provided
+3. **Contextual Intelligence**: 
+   - Connect related information from multiple facts
+   - Identify relationships between entities
+   - Explain "why" and "how" when relevant
+4. **Natural Conversation**: 
+   - Use clear, engaging language
+   - Structure your answer logically (main answer → supporting details)
+   - Be concise but thorough
+5. **Uncertainty Handling**: 
+   - If information is incomplete, acknowledge limitations
+   - Distinguish between confirmed facts and reasonable inferences
+   - Never fabricate information not present in the context
+
+## OUTPUT FORMAT
+Provide your answer as a natural, conversational response. No prefixes, no markdown formatting, just clear prose.
+
+## ANSWER:
+"""
             
             # Get LLM response
             response = await self.llm.generate(prompt)
             
-            return response if response else "I couldn't generate a response based on the available information."
+            # Post-process the response
+            if response:
+                # Remove any prompt artifacts that might leak through
+                clean_response = response.strip()
+                # Remove common LLM prefixes if present
+                for prefix in ["Answer:", "Response:", "Based on the information provided,"]:
+                    if clean_response.startswith(prefix):
+                        clean_response = clean_response[len(prefix):].strip()
+                
+                return clean_response if clean_response else "I couldn't find sufficient information to answer that question."
+            
+            return "I couldn't generate a response based on the available information."
+            
             
         except Exception as e:
             logger.error(f"❌ LLM synthesis failed: {e}")

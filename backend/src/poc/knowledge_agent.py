@@ -94,7 +94,7 @@ class IntelligentQueryEngine:
             logger.info("🧠 Initializing Knowledge Agent components...")
             
             # Initialize LLM
-            self.llm = ASIOneLLM(api_key="")
+            self.llm = ASIOneLLM(api_key="sk_941e448a52494b6298cfd3af219c81b120469ca2583042988c5747ce2e8ae036")
             logger.info("✅ LLM initialized")
             
             # Initialize MeTTa
@@ -122,7 +122,7 @@ class IntelligentQueryEngine:
     
     def _find_latest_knowledge_base(self) -> Optional[Path]:
         """Find the most recent knowledge base directory"""
-        base_path = Path(".")
+        base_path = Path("knowledge_bases")  # Check in knowledge_bases directory
         knowledge_dirs = list(base_path.glob("knowledge_base_*.db"))
         
         if not knowledge_dirs:
@@ -135,15 +135,16 @@ class IntelligentQueryEngine:
     async def _load_knowledge_base(self):
         """Load the FAISS index and fact mapping"""
         try:
-            # Load FAISS index
-            faiss_files = list(self.knowledge_base_path.glob("fact_index_*.faiss"))
+            # Load FAISS index from knowledge_bases directory
+            knowledge_bases_path = Path("knowledge_bases")
+            faiss_files = list(knowledge_bases_path.glob("fact_index_*.faiss"))
             if faiss_files:
                 latest_faiss = max(faiss_files, key=lambda p: p.stat().st_mtime)
                 self.faiss_index = faiss.read_index(str(latest_faiss))
                 logger.info(f"📚 Loaded FAISS index: {latest_faiss.name}")
             
-            # Load fact mapping
-            mapping_files = list(self.knowledge_base_path.glob("fact_mapping_*.json"))
+            # Load fact mapping from knowledge_bases directory
+            mapping_files = list(knowledge_bases_path.glob("fact_mapping_*.json"))
             if mapping_files:
                 latest_mapping = max(mapping_files, key=lambda p: p.stat().st_mtime)
                 with open(latest_mapping, 'r') as f:
@@ -155,6 +156,40 @@ class IntelligentQueryEngine:
             self.faiss_index = None
             self.fact_mapping = {}
     
+    async def _load_specific_knowledge_base(self, token_id: str):
+        """Load the specific knowledge base for a given token_id"""
+        try:
+            knowledge_bases_path = Path("knowledge_bases")
+            
+            # Try to load from knowledge_bases first
+            faiss_file = knowledge_bases_path / f"fact_index_{token_id}.faiss"
+            mapping_file = knowledge_bases_path / f"fact_mapping_{token_id}.json"
+            
+            # If not in knowledge_bases, try root directory
+            if not faiss_file.exists():
+                faiss_file = Path(f"fact_index_{token_id}.faiss")
+                mapping_file = Path(f"fact_mapping_{token_id}.json")
+            
+            if faiss_file.exists():
+                self.faiss_index = faiss.read_index(str(faiss_file))
+                logger.info(f"📚 Loaded FAISS index for token {token_id}: {faiss_file.name}")
+            else:
+                logger.warning(f"⚠️ No FAISS index found for token {token_id}")
+                self.faiss_index = None
+            
+            if mapping_file.exists():
+                with open(mapping_file, 'r') as f:
+                    self.fact_mapping = json.load(f)
+                logger.info(f"🗂️ Loaded fact mapping for token {token_id}: {mapping_file.name}")
+            else:
+                logger.warning(f"⚠️ No fact mapping found for token {token_id}")
+                self.fact_mapping = {}
+                
+        except Exception as e:
+            logger.error(f"❌ Failed to load knowledge base for token {token_id}: {e}")
+            self.faiss_index = None
+            self.fact_mapping = {}
+    
     async def process_query(self, query: str, token_id: str) -> Dict[str, Any]:
         """Process a knowledge query using MeTTa reasoning and vector search"""
         start_time = time.time()
@@ -162,6 +197,9 @@ class IntelligentQueryEngine:
         try:
             if not self.initialized:
                 await self.initialize()
+            
+            # Load the specific knowledge base for this token_id
+            await self._load_specific_knowledge_base(token_id)
             
             logger.info(f"🔍 Processing query for token {token_id}: {query}")
             

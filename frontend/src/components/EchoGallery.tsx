@@ -413,7 +413,7 @@ export const EchoGallery: React.FC = () => {
       <div className="w-full px-4 sm:px-6 lg:px-8 py-12">
         {/* Header Section */}
         <div className="text-center mb-12 animate-fade-in">
-          <h1 className="text-5xl lg:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700 mb-4">
+          <h1 style={{ lineHeight: 1.3 }} className="text-5xl lg:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-700 mb-4 leading-[1.2]">
             Knowledge Echo Marketplace
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">

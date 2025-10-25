@@ -13,7 +13,7 @@
     "intelligent": "cd src/poc && ./start_intelligent.sh",
     "intelligent:proxy": "nodemon --exec ts-node src/poc/intelligent_proxy.ts",
     "ingest": "cd src/poc && source venv/bin/activate && python ingest.py",
-    "creator-studio": "nodemon --exec ts-node src/creator-studio-server.ts"
+    "creator-studio": "nodemon --config nodemon.creator-studio.json"
   },
   "author": "",
   "license": "ISC",

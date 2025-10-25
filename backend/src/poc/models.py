@@ -64,9 +64,10 @@ class QueryRequest(Model):
     """Main query request from user"""
     query: str
     token_id: Optional[str] = None
-    payment_tx_hash: str
+    payment_tx_hash: Optional[str] = None  # Optional for owned Echos
     user_address: str
     use_credits: Optional[bool] = False
+    is_owned: Optional[bool] = False  # Whether user owns the Echo
 
 class QueryResponse(Model):
     """Final response to user"""

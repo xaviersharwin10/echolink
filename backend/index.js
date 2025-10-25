@@ -4,6 +4,13 @@ import dotenv from 'dotenv';
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, ToolMessage } from "@langchain/core/messages";
 import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -23,13 +30,33 @@ const llm = new ChatOpenAI({
   },
 });
 
-const ECHO_NFT_ADDRESS = '0x287b5a9EB0cAbDBD1860BCEF5f847C2958129FF4';
+const ECHO_NFT_ADDRESS = '0x39bc7190911b9334560ADfEf4100f1bE515fa3e1';
 const QUERY_PAYMENTS_ADDRESS = '0xFf08e351Bf16fE0703108cf9B4AeDe3a16fd0a46'; 
 const PYUSD_ADDRESS = '0xCaC524BcA292aaade2df8a05cC58F0a65B1B3bB9'; 
 
 // --- MIDDLEWARE ---
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// --- CONTENT STORAGE ---
+// File system storage for Echo content
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+const CONTENT_DIR = path.join(UPLOADS_DIR, 'content');
+const ORIGINAL_FILES_DIR = path.join(UPLOADS_DIR, 'original-files');
+
+// Ensure directories exist
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+if (!fs.existsSync(CONTENT_DIR)) {
+  fs.mkdirSync(CONTENT_DIR, { recursive: true });
+}
+if (!fs.existsSync(ORIGINAL_FILES_DIR)) {
+  fs.mkdirSync(ORIGINAL_FILES_DIR, { recursive: true });
+}
+
+console.log('📁 Storage directories initialized:', { UPLOADS_DIR, CONTENT_DIR, ORIGINAL_FILES_DIR });
 
 // --- THE BLOCKSCOUT MCP TOOLBOX ---
 const llmWithTools = llm.bindTools([
@@ -122,16 +149,28 @@ async function callMcpTool(toolName, params) {
 
 // --- MULTI-AGENT SYSTEM INTEGRATION ---
 app.post('/query', async (req, res) => {
-  const { query, token_id, payment_tx_hash, user_address, use_credits } = req.body;
+  const { query, token_id, payment_tx_hash, user_address, use_credits, is_owned } = req.body;
   
-  if (!query || !payment_tx_hash || !user_address) {
+  // For owned Echos, payment_tx_hash is not required
+  if (!query || !user_address) {
     return res.status(400).json({ 
-      error: 'Missing required fields: query, payment_tx_hash, user_address' 
+      error: 'Missing required fields: query, user_address' 
+    });
+  }
+
+  // For non-owned Echos, payment_tx_hash is required
+  if (!is_owned && !payment_tx_hash) {
+    return res.status(400).json({ 
+      error: 'Missing required field: payment_tx_hash' 
     });
   }
 
   console.log(`🎭 Multi-Agent Query: "${query}" for user: ${user_address}`);
-  console.log(`💳 Payment TX: ${payment_tx_hash} (${use_credits ? 'Credits' : 'Direct'})`);
+  if (is_owned) {
+    console.log(`👑 Owned Echo - No payment required`);
+  } else {
+    console.log(`💳 Payment TX: ${payment_tx_hash} (${use_credits ? 'Credits' : 'Direct'})`);
+  }
 
   try {
     // Call the Orchestrator Agent directly and wait for the complete response
@@ -139,9 +178,10 @@ app.post('/query', async (req, res) => {
     const orchestratorResponse = await axios.post('http://localhost:8004/query', {
       query,
       token_id,
-      payment_tx_hash,
+      payment_tx_hash: is_owned ? null : payment_tx_hash, // Pass null for owned Echos
       user_address,
-      use_credits: use_credits || false
+      use_credits: use_credits || false,
+      is_owned: is_owned || false
     });
 
     console.log('✅ Orchestrator response:', orchestratorResponse.data);
@@ -183,17 +223,12 @@ app.post('/ask', async (req, res) => {
 
   console.log(`Received question: "${question}" for address: ${connectedAddress}`);
 
-  // ABI for the crucial getAllEchoes() function needed for dynamic ranking
-  const GET_ALL_ECHOS_ABI = JSON.stringify({
+  // ABI for getting total number of Echos
+  const GET_TOTAL_ECHOS_ABI = JSON.stringify({
     "inputs": [],
-    "name": "getAllEchoes",
+    "name": "getTotalEchoes",
     "outputs": [
-      {"internalType": "uint256[]", "name": "tokenIds", "type": "uint256[]"},
-      {"internalType": "string[]", "name": "names", "type": "string[]"},
-      {"internalType": "string[]", "name": "descriptions", "type": "string[]"},
-      {"internalType": "address[]", "name": "creators", "type": "address[]"},
-      {"internalType": "uint256[]", "name": "pricesPerQuery", "type": "uint256[]"},
-      {"internalType": "bool[]", "name": "activeStatuses", "type": "bool[]"}
+      {"internalType": "uint256", "name": "", "type": "uint256"}
     ],
     "stateMutability": "view",
     "type": "function"
@@ -229,7 +264,7 @@ app.post('/ask', async (req, res) => {
       - **Protocol Fee:** The net amount earned by the creator is 95% of the gross payment (5% fee).
       
       **CRITICAL ABIs (Use with read_contract tool):**
-      - getAllEchoes() ABI: ${GET_ALL_ECHOS_ABI}
+      - getTotalEchoes() ABI: ${GET_TOTAL_ECHOS_ABI}
       - getEchoData() ABI: ${GET_ECHO_DATA_ABI}
       
       **CRITICAL INSTRUCTION:** For the key contract addresses above, you MUST use the provided hexadecimal addresses directly.
@@ -240,10 +275,10 @@ app.post('/ask', async (req, res) => {
       **INTERNAL REASONING STEPS:**
       1.  **Intent Check:** Determine the user's primary goal (e.g., "popular echo", "my balance", "trace flow").
       2.  **Popularity/Ranking (DYNAMIC DATA):** If asked about popularity, ranking, or creator earnings, you MUST perform a multi-step query:
-          * Step 1: Execute \`read_contract\` on **EchoLink NFT Contract** using the **getAllEchoes() ABI** to fetch the current list of all minted Echos and their creators.
+          * Step 1: Execute \`read_contract\` on **EchoLink NFT Contract** using the **getTotalEchoes() ABI** to get the total count, then iterate through token IDs (1 to total) using \`getEchoData() ABI\` to fetch the current list of all minted Echos and their creators.
           * Step 2: Iterate through the fetched Echo list. For each creator's address, use \`get_address_info\` to retrieve the associated transaction count (TX count is the proxy for popularity).
           * Step 3: Compare and rank the Echos based on the collected activity data.
-      3.  **Name-to-ID Lookup (CRITICAL FIRST STEP):** If the user provides an Echo Name (e.g., "Xavier - The biography") instead of an ID, you MUST first call \`read_contract\` on the \`EchoLink NFT Contract\` using the \`getAllEchoes() ABI\`. You must then internally parse the result to find the corresponding \`tokenId\` before proceeding with any analysis.
+      3.  **Name-to-ID Lookup (CRITICAL FIRST STEP):** If the user provides an Echo Name (e.g., "Xavier - The biography") instead of an ID, you MUST first call \`read_contract\` on the \`EchoLink NFT Contract\` using the \`getTotalEchoes() ABI\` to get the total count, then iterate through token IDs (1 to total) using \`getEchoData() ABI\` to find the corresponding \`tokenId\` before proceeding with any analysis.
       4.  **Contract Status:** If asked about specific Echo data, use the \`read_contract\` tool on the \`EchoLink NFT Contract\` with the **getEchoData() ABI**.
       5.  **Flow Tracing:** If asked about payments or flow, use \`get_token_transfers_by_address\` filtering by PYUSD and the relevant contract address.
       6.  **Final Synthesis:** Synthesize all verified data into a professional, direct report.
@@ -294,6 +329,244 @@ app.post('/ask', async (req, res) => {
     console.error('Error in AI flow:', error);
     // Send a safe, general error response
     res.status(500).json({ error: 'Failed to process the AI request due to an internal system error.' });
+  }
+});
+
+// --- CONTENT STORAGE ENDPOINTS ---
+
+// Store Echo content
+app.post('/store-content', (req, res) => {
+  try {
+    const { tokenId, name, description, knowledgeBase, metadata, creator, isOwned, originalFile } = req.body;
+    
+    console.log(`📦 Backend: Storing content for token ID: ${tokenId}`);
+    console.log(`📦 Backend: Content data:`, { tokenId, name, description: description?.substring(0, 50) + '...', hasKnowledgeBase: !!knowledgeBase, hasOriginalFile: !!originalFile });
+    
+    const content = {
+      tokenId,
+      name,
+      description,
+      knowledgeBase,
+      metadata,
+      creator,
+      isOwned: isOwned || false,
+      createdAt: new Date().toISOString()
+    };
+    
+    // Store content as JSON file
+    const contentFilePath = path.join(CONTENT_DIR, `${tokenId}.json`);
+    fs.writeFileSync(contentFilePath, JSON.stringify(content, null, 2));
+    console.log(`📦 Backend: Content stored in file: ${contentFilePath}`);
+    
+    // Store original file if provided
+    if (originalFile) {
+      const fileExtension = path.extname(originalFile.fileName) || '.bin';
+      const originalFilePath = path.join(ORIGINAL_FILES_DIR, `${tokenId}${fileExtension}`);
+      
+      // Convert base64 to buffer and write to file
+      const fileBuffer = Buffer.from(originalFile.data, 'base64');
+      fs.writeFileSync(originalFilePath, fileBuffer);
+      
+      console.log(`📁 Backend: Stored original file for Echo #${tokenId} at: ${originalFilePath}`);
+    }
+    
+    console.log(`✅ Backend: Successfully stored content for Echo #${tokenId}`);
+    
+    res.json({ success: true, message: 'Content stored successfully' });
+  } catch (error) {
+    console.error('Error storing content:', error);
+    res.status(500).json({ error: 'Failed to store content' });
+  }
+});
+
+// Get Echo content by token ID
+app.get('/get-content/:tokenId', (req, res) => {
+  try {
+    const tokenId = parseInt(req.params.tokenId);
+    console.log(`🔍 Backend: Getting content for token ID: ${tokenId}`);
+    
+    const contentFilePath = path.join(CONTENT_DIR, `${tokenId}.json`);
+    console.log(`📁 Backend: Looking for content file: ${contentFilePath}`);
+    
+    if (!fs.existsSync(contentFilePath)) {
+      console.log(`❌ Backend: Content file not found: ${contentFilePath}`);
+      return res.status(404).json({ error: 'Content not found' });
+    }
+    
+    const contentData = fs.readFileSync(contentFilePath, 'utf8');
+    const content = JSON.parse(contentData);
+    
+    console.log(`✅ Backend: Retrieved content from file for token ID: ${tokenId}`);
+    res.json(content);
+  } catch (error) {
+    console.error('Error fetching content:', error);
+    res.status(500).json({ error: 'Failed to fetch content' });
+  }
+});
+
+// Get original file by token ID
+app.get('/get-original-file/:tokenId', (req, res) => {
+  try {
+    const tokenId = parseInt(req.params.tokenId);
+    console.log(`🔍 Backend: Getting original file for token ID: ${tokenId}`);
+    
+    // Look for the original file in the original-files directory
+    const originalFilesDir = path.join(ORIGINAL_FILES_DIR);
+    const files = fs.readdirSync(originalFilesDir);
+    const originalFile = files.find(file => file.startsWith(`${tokenId}.`));
+    
+    if (!originalFile) {
+      console.log(`❌ Backend: Original file not found for token ID: ${tokenId}`);
+      return res.status(404).json({ error: 'Original file not found' });
+    }
+    
+    const originalFilePath = path.join(ORIGINAL_FILES_DIR, originalFile);
+    console.log(`📁 Backend: Serving original file: ${originalFilePath}`);
+    
+    // Get file extension to determine content type
+    const fileExtension = path.extname(originalFile).toLowerCase();
+    let contentType = 'application/octet-stream';
+    
+    const contentTypeMap = {
+      '.pdf': 'application/pdf',
+      '.txt': 'text/plain',
+      '.mp4': 'video/mp4',
+      '.mov': 'video/quicktime',
+      '.mp3': 'audio/mpeg',
+      '.wav': 'audio/wav',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    };
+    
+    contentType = contentTypeMap[fileExtension] || 'application/octet-stream';
+    
+    // Set appropriate headers
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${originalFile}"`);
+    
+    // Send the file
+    res.sendFile(originalFilePath);
+    console.log(`✅ Backend: Served original file for token ID: ${tokenId}`);
+  } catch (error) {
+    console.error('Error fetching original file:', error);
+    res.status(500).json({ error: 'Failed to fetch original file' });
+  }
+});
+
+// Get all Echo content
+app.get('/get-all-content', (req, res) => {
+  try {
+    console.log(`🔍 Backend: Getting all content from directory: ${CONTENT_DIR}`);
+    
+    const files = fs.readdirSync(CONTENT_DIR);
+    const allContent = [];
+    
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        const filePath = path.join(CONTENT_DIR, file);
+        const contentData = fs.readFileSync(filePath, 'utf8');
+        const content = JSON.parse(contentData);
+        allContent.push(content);
+      }
+    }
+    
+    console.log(`✅ Backend: Retrieved ${allContent.length} content items`);
+    res.json(allContent);
+  } catch (error) {
+    console.error('Error fetching all content:', error);
+    res.status(500).json({ error: 'Failed to fetch all content' });
+  }
+});
+
+// Update ownership status
+app.post('/update-ownership', (req, res) => {
+  try {
+    const { tokenId, isOwned } = req.body;
+    console.log(`👑 Backend: Updating ownership for token ID: ${tokenId} to ${isOwned}`);
+    
+    const contentFilePath = path.join(CONTENT_DIR, `${tokenId}.json`);
+    
+    if (!fs.existsSync(contentFilePath)) {
+      console.log(`❌ Backend: Content file not found: ${contentFilePath}`);
+      return res.status(404).json({ error: 'Content not found' });
+    }
+    
+    const contentData = fs.readFileSync(contentFilePath, 'utf8');
+    const content = JSON.parse(contentData);
+    
+    content.isOwned = isOwned;
+    content.updatedAt = new Date().toISOString();
+    
+    fs.writeFileSync(contentFilePath, JSON.stringify(content, null, 2));
+    
+    console.log(`✅ Backend: Updated ownership for Echo #${tokenId}: ${isOwned ? 'Owned' : 'Not owned'}`);
+    res.json({ success: true, message: 'Ownership updated successfully' });
+  } catch (error) {
+    console.error('Error updating ownership:', error);
+    res.status(500).json({ error: 'Failed to update ownership' });
+  }
+});
+
+// Get owned content for a user
+app.get('/get-owned-content/:userAddress', (req, res) => {
+  try {
+    const userAddress = req.params.userAddress;
+    console.log(`🔍 Backend: Getting owned content for user: ${userAddress}`);
+    
+    const files = fs.readdirSync(CONTENT_DIR);
+    const ownedContent = [];
+    
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        const filePath = path.join(CONTENT_DIR, file);
+        const contentData = fs.readFileSync(filePath, 'utf8');
+        const content = JSON.parse(contentData);
+        
+        if (content.isOwned) {
+          ownedContent.push(content);
+        }
+      }
+    }
+    
+    console.log(`✅ Backend: Retrieved ${ownedContent.length} owned content items`);
+    res.json(ownedContent);
+  } catch (error) {
+    console.error('Error fetching owned content:', error);
+    res.status(500).json({ error: 'Failed to fetch owned content' });
+  }
+});
+
+// Search content
+app.post('/search-content', (req, res) => {
+  try {
+    const { query } = req.body;
+    console.log(`🔍 Backend: Searching content for query: ${query}`);
+    
+    const files = fs.readdirSync(CONTENT_DIR);
+    const searchResults = [];
+    
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        const filePath = path.join(CONTENT_DIR, file);
+        const contentData = fs.readFileSync(filePath, 'utf8');
+        const content = JSON.parse(contentData);
+        
+        if (content.name.toLowerCase().includes(query.toLowerCase()) ||
+            content.description.toLowerCase().includes(query.toLowerCase()) ||
+            content.knowledgeBase.toLowerCase().includes(query.toLowerCase())) {
+          searchResults.push(content);
+        }
+      }
+    }
+    
+    console.log(`✅ Backend: Found ${searchResults.length} search results`);
+    res.json(searchResults);
+  } catch (error) {
+    console.error('Error searching content:', error);
+    res.status(500).json({ error: 'Failed to search content' });
   }
 });
 

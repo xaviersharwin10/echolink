@@ -388,8 +388,12 @@ class TemplateIndexBuilder:
         faiss.normalize_L2(embeddings)
         index.add(embeddings)
         
+        # Create knowledge directory if it doesn't exist
+        knowledge_dir = "knowledge_bases"
+        os.makedirs(knowledge_dir, exist_ok=True)
+        
         # Save index
-        output_path = f"fact_index_{token_id}.faiss"
+        output_path = os.path.join(knowledge_dir, f"fact_index_{token_id}.faiss")
         faiss.write_index(index, output_path)
         
         # Save fact mapping
@@ -399,7 +403,7 @@ class TemplateIndexBuilder:
             'count': len(triples)
         }
         
-        mapping_path = f"fact_mapping_{token_id}.json"
+        mapping_path = os.path.join(knowledge_dir, f"fact_mapping_{token_id}.json")
         with open(mapping_path, 'w') as f:
             json.dump(fact_mapping, f, indent=2)
         
@@ -448,7 +452,10 @@ class KnowledgeIngestionPipeline:
         
         # Step 4: Save knowledge graph
         logger.info("💾 Step 4: Saving knowledge graph...")
-        knowledge_path = f"knowledge_base_{token_id}.db"
+        # Create knowledge directory if it doesn't exist
+        knowledge_dir = "knowledge_bases"
+        os.makedirs(knowledge_dir, exist_ok=True)
+        knowledge_path = os.path.join(knowledge_dir, f"knowledge_base_{token_id}.db")
         self.knowledge_builder.save_knowledge_graph(knowledge_path)
         logger.info("")
         

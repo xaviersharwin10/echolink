@@ -1,0 +1,13 @@
+{
+  "watch": ["src/**/*", "*.js", "*.ts"],
+  "ignore": [
+    "temp/**/*",
+    "uploads/**/*",
+    "knowledge_bases/**/*",
+    "node_modules/**/*",
+    "dist/**/*",
+    "*.log"
+  ],
+  "ext": "ts,js,json",
+  "exec": "ts-node src/creator-studio-server.ts"
+}

@@ -56,6 +56,14 @@ contract QueryPayments is Ownable {
         emit QueryPaid(msg.sender, creator, tokenId, amount);
     }
 
+    /**
+     * @dev Update protocol fee percentage (only owner)
+     */
+    function setProtocolFeePercent(uint256 _feePercent) public onlyOwner {
+        require(_feePercent <= 20, "Fee cannot exceed 20%"); // Maximum 20% fee
+        protocolFeePercent = _feePercent;
+    }
+
     // Function for the owner to withdraw the collected fees
     function withdrawFees() public onlyOwner {
         uint256 balance = pyusdToken.balanceOf(address(this));

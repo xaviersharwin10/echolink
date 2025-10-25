@@ -400,7 +400,12 @@ async def handle_rest_query(ctx: Context, req: QueryRequest) -> QueryResponse:
     Waits for the complete workflow and returns the final result.
     """
     ctx.logger.info(f"📡 REST Query received: {req.query}")
-    ctx.logger.info(f"💰 Payment validation required for tx: {req.payment_tx_hash[:20]}...")
+    
+    # Check if this is an owned Echo
+    if req.is_owned:
+        ctx.logger.info("👑 Owned Echo - Skipping payment validation")
+    else:
+        ctx.logger.info(f"💰 Payment validation required for tx: {req.payment_tx_hash[:20]}...")
     
     query_id = str(uuid4())
     start_time = time.time()
@@ -408,35 +413,71 @@ async def handle_rest_query(ctx: Context, req: QueryRequest) -> QueryResponse:
     # Initialize query state
     pending_queries[query_id] = {
         "status": "pending",
-        "progress": "Starting payment validation...",
+        "progress": "Starting payment validation..." if not req.is_owned else "Processing owned Echo query...",
         "start_time": start_time,
         "sender": None,  # REST request, no sender
         "original_request": req,
-        "payment_validated": False,
+        "payment_validated": req.is_owned,  # Skip payment validation for owned Echos
         "knowledge_processed": False,
         "result": None,
         "error": None
     }
     
     try:
-        # Step 1: Validate Payment
-        ctx.logger.info("🔄 Step 1: Initiating payment validation...")
-        
-        payment_request = PaymentValidationRequest(
-            payment_tx_hash=req.payment_tx_hash,
-            user_address=req.user_address,
-            use_credits=req.use_credits,
-            token_id=req.token_id,
-            query_id=query_id
-        )
-        
-        # Send payment validation request to Payment Agent
-        if PAYMENT_AGENT_ADDRESS:
-            await ctx.send(PAYMENT_AGENT_ADDRESS, payment_request)
+        if req.is_owned:
+            # For owned Echos, skip payment validation and go directly to knowledge processing
+            ctx.logger.info("👑 Step 1: Skipping payment validation for owned Echo")
+            pending_queries[query_id]["payment_validated"] = True
+            pending_queries[query_id]["progress"] = "Payment validation skipped - processing knowledge query..."
+            
+            # Immediately trigger knowledge processing for owned Echos
+            ctx.logger.info("🧠 Step 2: Initiating knowledge processing for owned Echo...")
+            try:
+                knowledge_request = KnowledgeQueryRequest(
+                    query=req.query,
+                    token_id=req.token_id or "default",
+                    query_id=query_id,
+                    user_address=req.user_address
+                )
+                
+                # Send knowledge query request to Knowledge Agent
+                if KNOWLEDGE_AGENT_ADDRESS:
+                    await ctx.send(KNOWLEDGE_AGENT_ADDRESS, knowledge_request)
+                    ctx.logger.info("✅ Knowledge processing request sent for owned Echo")
+                else:
+                    raise Exception("Knowledge Agent address not configured")
+                    
+            except Exception as e:
+                ctx.logger.error(f"❌ Failed to initiate knowledge processing for owned Echo: {e}")
+                pending_queries[query_id]["status"] = "failed"
+                pending_queries[query_id]["error"] = str(e)
+                return QueryResponse(
+                    success=False,
+                    answer="",
+                    token_id=req.token_id,
+                    timestamp=int(time.time()),
+                    error=f"Failed to process owned Echo query: {str(e)}",
+                    processing_time_ms=(time.time() - start_time) * 1000
+                )
         else:
-            raise Exception("Payment Agent address not configured")
-        
-        ctx.logger.info("✅ Payment validation request sent")
+            # Step 1: Validate Payment
+            ctx.logger.info("🔄 Step 1: Initiating payment validation...")
+            
+            payment_request = PaymentValidationRequest(
+                payment_tx_hash=req.payment_tx_hash,
+                user_address=req.user_address,
+                use_credits=req.use_credits,
+                token_id=req.token_id,
+                query_id=query_id
+            )
+            
+            # Send payment validation request to Payment Agent
+            if PAYMENT_AGENT_ADDRESS:
+                await ctx.send(PAYMENT_AGENT_ADDRESS, payment_request)
+            else:
+                raise Exception("Payment Agent address not configured")
+            
+            ctx.logger.info("✅ Payment validation request sent")
         
         # Wait for the complete workflow to finish
         max_wait_time = 100  # 60 seconds max

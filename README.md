@@ -238,10 +238,13 @@ REACT_APP_CHAIN_ID=84532  # Base Sepolia
 
 ### Running the Application
 
-1. **Start the Creator Studio Backend**
+1. **Start the Backend**
 ```bash
 cd backend
 npm run dev  # or npm start
+# open a new terminal
+cd backend
+npm run creator-studio
 ```
 
 2. **Start the Frontend**
@@ -260,8 +263,12 @@ npm run deploy:query-payments
 
 4. **Start AI Agents** (if using local agents)
 ```bash
-cd backend
-# Start orchestrator, payment, and knowledge agents
+cd backend/src/poc
+source venv/bin/activate
+./start_multi_agent_system.sh
+
+
+Update the relevant api keys in knowledge_agent.py, intelligent_agent.py, multiagent_config.py, backend/index.js
 ```
 
 ## 📖 Usage Guide
@@ -302,20 +309,6 @@ cd backend
 2. View your current credit balance
 3. Buy credits with PYUSD (1 PYUSD = 100 credits)
 4. Use credits to query paid Echos
-
-## 🧪 Testing
-
-### Run Contract Tests
-```bash
-cd contracts
-npx hardhat test
-```
-
-### Run Frontend Tests
-```bash
-cd frontend
-npm test
-```
 
 ## 🛠️ Technologies Used
 
@@ -366,11 +359,6 @@ npm test
 - **Web3.py** (blockchain interaction)
 - **RainbowKit** (wallet connection)
 
-
-
-## 📞 Support
-
-For questions or support, please open an issue on GitHub.
 
 ## 🚀 Business Model & Scalability
 

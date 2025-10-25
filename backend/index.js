@@ -106,7 +106,7 @@ const llmWithTools = llm.bindTools([
           chain_id: { type: "string", description: "The chain ID." },
           address: { type: "string", description: "The smart contract address." },
           function_name: { type: "string", description: "Name of the function to call (e.g., 'ownerOf')." },
-          abi: { type: "string", description: "REQUIRED: JSON-encoded single function ABI fragment (e.g., from ECHO_NFT_ABI)." },
+          abi: { type: "string", description: "REQUIRED: JSON-encoded single function ABI fragment." },
           args: { type: "string", description: "JSON-encoded array of function arguments (e.g., '[1]')." },
         },
         required: ["chain_id", "address", "function_name", "abi"],
@@ -224,11 +224,11 @@ app.post('/ask', async (req, res) => {
   console.log(`Received question: "${question}" for address: ${connectedAddress}`);
 
   // ABI for getting total number of Echos
-  const GET_TOTAL_ECHOS_ABI = JSON.stringify({
+  const GET_ALL_TOKEN_IDS_ABI = JSON.stringify({
     "inputs": [],
-    "name": "getTotalEchoes",
+    "name": "getAllTokenIds",
     "outputs": [
-      {"internalType": "uint256", "name": "", "type": "uint256"}
+      { "internalType": "uint256[]", "name": "", "type": "uint256[]" }
     ],
     "stateMutability": "view",
     "type": "function"
@@ -239,11 +239,14 @@ app.post('/ask', async (req, res) => {
     "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
     "name": "getEchoData",
     "outputs": [
-      {"internalType": "string", "name": "name", "type": "string"},
-      {"internalType": "string", "name": "description", "type": "string"},
-      {"internalType": "address", "name": "creator", "type": "address"},
-      {"internalType": "uint256", "name": "pricePerQuery", "type": "uint256"},
-      {"internalType": "bool", "name": "isActive", "type": "bool"}
+      { "internalType": "string", "name": "name", "type": "string" },
+      { "internalType": "string", "name": "description", "type": "string" },
+      { "internalType": "address", "name": "creator", "type": "address" },
+      { "internalType": "uint256", "name": "pricePerQuery", "type": "uint256" },
+      { "internalType": "uint256", "name": "purchasePrice", "type": "uint256" },
+      { "internalType": "bool", "name": "isActive", "type": "bool" },
+      { "internalType": "bool", "name": "isForSale", "type": "bool" },
+      { "internalType": "address", "name": "owner", "type": "address" }
     ],
     "stateMutability": "view",
     "type": "function"
@@ -260,12 +263,12 @@ app.post('/ask', async (req, res) => {
       - PYUSD Token Contract: **${PYUSD_ADDRESS}** (The asset of interest for all payments).
       
       **CRITICAL DATA CONVERSION PROTOCOL (MANDATORY):**
-      - **PYUSD Value:** PYUSD has 6 decimal places. To get the readable PYUSD amount from raw contract data (wei), you must divide the raw unit by 1,000,000 (10^6).
+      - **PYUSD Value:** PYUSD has 6 decimal places. The raw unit returned by contracts MUST be divided by 1,000,000 (10^6) to get the final dollar amount.
       - **Protocol Fee:** The net amount earned by the creator is 95% of the gross payment (5% fee).
       
       **CRITICAL ABIs (Use with read_contract tool):**
-      - getTotalEchoes() ABI: ${GET_TOTAL_ECHOS_ABI}
-      - getEchoData() ABI: ${GET_ECHO_DATA_ABI}
+      - getAllTokenIds() ABI (to get all minted IDs): ${GET_ALL_TOKEN_IDS_ABI}
+      - getEchoData() ABI (to get specific Echo details): ${GET_ECHO_DATA_ABI}
       
       **CRITICAL INSTRUCTION:** For the key contract addresses above, you MUST use the provided hexadecimal addresses directly.
       
@@ -273,15 +276,15 @@ app.post('/ask', async (req, res) => {
       --- START INTERNAL PLANNING MANDATE (DO NOT OUTPUT THIS CONTENT) ---
 
       **INTERNAL REASONING STEPS:**
-      1.  **Intent Check:** Determine the user's primary goal (e.g., "popular echo", "my balance", "trace flow").
+      1.  **Intent Check:** Determine the user's primary goal (e.g., "popular echo", "my balance", "trace flow", "profitability of creator").
       2.  **Popularity/Ranking (DYNAMIC DATA):** If asked about popularity, ranking, or creator earnings, you MUST perform a multi-step query:
-          * Step 1: Execute \`read_contract\` on **EchoLink NFT Contract** using the **getTotalEchoes() ABI** to get the total count, then iterate through token IDs (1 to total) using \`getEchoData() ABI\` to fetch the current list of all minted Echos and their creators.
-          * Step 2: Iterate through the fetched Echo list. For each creator's address, use \`get_address_info\` to retrieve the associated transaction count (TX count is the proxy for popularity).
+          * Step 1: Execute \`read_contract\` on **EchoLink NFT Contract** using the **getAllTokenIds() ABI** to fetch all existing Token IDs.
+          * Step 2: Iterate through the returned Token IDs. For each ID, call \`read_contract\` with the **getEchoData() ABI** to fetch its details, and use \`get_address_info\` for the creator's address to get a TX count (proxy for popularity).
           * Step 3: Compare and rank the Echos based on the collected activity data.
-      3.  **Name-to-ID Lookup (CRITICAL FIRST STEP):** If the user provides an Echo Name (e.g., "Xavier - The biography") instead of an ID, you MUST first call \`read_contract\` on the \`EchoLink NFT Contract\` using the \`getTotalEchoes() ABI\` to get the total count, then iterate through token IDs (1 to total) using \`getEchoData() ABI\` to find the corresponding \`tokenId\` before proceeding with any analysis.
+      3.  **Name-to-ID Lookup (CRITICAL FIRST STEP):** If the user provides an Echo Name (e.g., "Xavier - The biography") instead of an ID, you MUST first call \`read_contract\` on the \`EchoLink NFT Contract\` using the **getAllTokenIds() ABI** to fetch all existing Token IDs. Then, for each ID, call \`read_contract\` with the **getEchoData() ABI** to fetch its name and internally find the corresponding \`tokenId\`. Only then can you proceed with the analysis using the ID.
       4.  **Contract Status:** If asked about specific Echo data, use the \`read_contract\` tool on the \`EchoLink NFT Contract\` with the **getEchoData() ABI**.
       5.  **Flow Tracing:** If asked about payments or flow, use \`get_token_transfers_by_address\` filtering by PYUSD and the relevant contract address.
-      6.  **Final Synthesis:** Synthesize all verified data into a professional, direct report.
+      6.  **Final Synthesis:** Synthesize all verified data into a professional, direct report, applying the **CRITICAL DATA CONVERSION PROTOCOL** for all PYUSD values, and adhering to the **FINAL OUTPUT MANDATE** for formatting and charting.
 
       --- END INTERNAL PLANNING MANDATE ---
 

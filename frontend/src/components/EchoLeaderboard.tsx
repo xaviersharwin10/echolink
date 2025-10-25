@@ -16,7 +16,7 @@ const PRICE_TIERS = [
     { label: "$0.51+", max: Infinity, count: 0, color: 'bg-red-100' }
 ];
 
-const HIGH_VALUE_THRESHOLD = 0.10; // $0.50 PYUSD
+const HIGH_VALUE_THRESHOLD = 0.50;
 
 // --- Interfaces ---
 interface EchoStats {
@@ -88,39 +88,57 @@ export const EchoLeaderboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchBlockscoutData = async (params: Record<string, string>): Promise<any> => {
+      const query = new URLSearchParams(params).toString();
+      const response = await fetch(`${BLOCKSCOUT_API_BASE}?${query}`);
+      const data = await response.json();
+      return data.result || [];
+  };
+
+
   const fetchEchoData = async () => {
     console.log("--- Starting fetchEchoData ---");
     try {
-      // --- Step 1: Get Total Count and Individual Echo Data from Smart Contract (Wagmi) ---
-      const totalCount = Number(await readContract({
+      const existingTokenIds = await readContract({
         address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
         abi: ECHO_NFT_ABI,
-        functionName: 'getTotalEchoes',
-      }) as bigint);
+        functionName: 'getAllTokenIds',
+      }) as bigint[];
+      
+      console.log(`Found ${existingTokenIds.length} minted Token IDs.`);
+
 
       const echoMetadataMap = new Map<number, { name: string; creator: string; price: number }>();
-      console.log("echo",echoMetadataMap);
       
       // Initialize price distribution calculation
       const currentPriceDistribution: PriceTierData[] = JSON.parse(JSON.stringify(PRICE_TIERS)); // Deep copy
 
       // Track Echos per creator and their price status for the new metric
       const creatorPriceTracker = new Map<string, { total: number; highValue: number }>();
+      
+      const uniqueCreators = new Set<string>();
 
-      // Fetch individual Echo data for each token
-      for (let i = 1; i <= totalCount; i++) {
+      // --- Fetch data for EACH existing Echo ---
+      for (const id of existingTokenIds) {
+        const tokenIdNumber = Number(id);
+        
         try {
+          // Fetch the 8-field tuple data
           const echoData = await readContract({
             address: ECHOLNK_NFT_ADDRESS as `0x${string}`,
             abi: ECHO_NFT_ABI,
             functionName: 'getEchoData',
-            args: [BigInt(i)],
-          }) as unknown as [string, string, `0x${string}`, bigint, boolean, bigint, boolean, `0x${string}`];
+            args: [id],
+          }) as unknown as [string, string, `0x${string}`, bigint, bigint, boolean, boolean, `0x${string}`]; // Corrected tuple structure
 
-          const [name, description, creator, pricePerQuery, isActive, purchasePrice, isForSale, owner] = echoData;
-          const tokenIdNumber = i;
+          const [name, , creator, pricePerQuery] = echoData;
+
+          // Skip if data is blank/uninitialized (e.g., name is empty)
+          if (!name) continue; 
+
           const price = Number(pricePerQuery) / (10 ** PYUSD_DECIMALS);
           const creatorAddress = creator;
+          uniqueCreators.add(creatorAddress);
 
           echoMetadataMap.set(tokenIdNumber, {
             name: name,
@@ -142,9 +160,7 @@ export const EchoLeaderboard: React.FC = () => {
               tracker.highValue++;
           }
         } catch (error) {
-          console.warn(`Failed to fetch data for token ${i}`, error);
-          // Skip this token and continue with the next one
-          continue;
+          console.warn(`Skipping Echo ID ${tokenIdNumber} due to fetch error.`, error);
         }
       }
       
@@ -157,12 +173,12 @@ export const EchoLeaderboard: React.FC = () => {
       // --- Step 2: Define and Fetch Events from Blockscout ---
 
       const paymentEvents = await axios.all([
-        axios.get(`${BLOCKSCOUT_API_BASE}`, { params: { module: 'logs', action: 'getLogs', address: QUERY_PAYMENTS_ADDRESS, topic0: QUERY_PAID_TOPIC, fromBlock: 0, toBlock: 'latest', }}),
-        axios.get(`${BLOCKSCOUT_API_BASE}`, { params: { module: 'logs', action: 'getLogs', address: ECHOLNK_NFT_ADDRESS, topic0: CREDITS_USED_TOPIC, fromBlock: 0, toBlock: 'latest', }}),
+        fetchBlockscoutData({ module: 'logs', action: 'getLogs', address: QUERY_PAYMENTS_ADDRESS, topic0: QUERY_PAID_TOPIC, fromBlock: '0', toBlock: 'latest' }),
+        fetchBlockscoutData({ module: 'logs', action: 'getLogs', address: ECHOLNK_NFT_ADDRESS, topic0: CREDITS_USED_TOPIC, fromBlock: '0', toBlock: 'latest' }),
       ]);
       
-      const rawQueryPaidEvents: LogEvent[] = paymentEvents[0].data.result || [];
-      const rawCreditsUsedEvents: LogEvent[] = paymentEvents[1].data.result || [];
+      const rawQueryPaidEvents: LogEvent[] = paymentEvents[0] || [];
+      const rawCreditsUsedEvents: LogEvent[] = paymentEvents[1] || [];
       
       console.log(`✅ Fetched ${rawQueryPaidEvents.length} QueryPaid events and ${rawCreditsUsedEvents.length} CreditsUsed events from Blockscout.`);
 
@@ -273,7 +289,7 @@ export const EchoLeaderboard: React.FC = () => {
                   totalQueries: 0,
                   topEchoId: null,
                   totalWalletTxs: 0, 
-                  highValueEchoRatio: ratio, // Store the calculated ratio
+                  highValueEchoRatio: ratio,
               });
           }
           const creatorEntry = creatorMap.get(creatorAddress)!;
@@ -356,7 +372,7 @@ export const EchoLeaderboard: React.FC = () => {
   
   const renderPriceDistribution = () => {
     // Determine the total number of Echos to calculate percentages
-    const total = priceDistribution.reduce((sum, tier) => sum + tier.count, 0);
+    const total = priceDistribution.reduce((sum: number, tier: PriceTierData) => sum + tier.count, 0);
 
     return (
       <div className="h-full">
@@ -368,7 +384,7 @@ export const EchoLeaderboard: React.FC = () => {
         </p>
         
         <div className="space-y-4 pt-2">
-            {priceDistribution.map((tier) => {
+            {priceDistribution.map((tier: PriceTierData) => {
                 const percentage = total > 0 ? (tier.count / total) * 100 : 0;
                 return (
                     <div key={tier.label} className="flex flex-col">
@@ -394,7 +410,7 @@ export const EchoLeaderboard: React.FC = () => {
   const renderTopEchosChart = () => {
     // Take top 5 Echos
     const topEchos = leaderboard.slice(0, 5);
-    const maxQueries = topEchos.length > 0 ? Math.max(...topEchos.map(e => e.totalQueries)) : 1;
+    const maxQueries = topEchos.length > 0 ? Math.max(...topEchos.map((e: EchoStats) => e.totalQueries)) : 1;
 
     return (
         <div className="h-full">
@@ -405,7 +421,7 @@ export const EchoLeaderboard: React.FC = () => {
                 Most actively used knowledge agents (queries).
             </p>
             <div className="space-y-4 pt-2">
-                {topEchos.map((echo) => {
+                {topEchos.map((echo: EchoStats) => {
                     const barWidth = (echo.totalQueries / maxQueries) * 100;
                     const barColor = generateBarColor(echo.tokenId);
 
@@ -439,17 +455,15 @@ export const EchoLeaderboard: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                     <tr>
-                        <th className="px-3 py-2  text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Creator Address</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Echos</th>
                         <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Queries</th>
-                        {/* <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">TXs</th> 
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Quality</th>  */}
                         <th className="px-3 py-2 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Earnings</th>
                     </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                    {creatorLeaderboard.slice(0, 5).map((creator, index) => (
+                    {creatorLeaderboard.slice(0, 5).map((creator: CreatorStats, index: number) => (
                         <tr key={creator.address} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                             <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-center">
                                 {index + 1}
@@ -461,14 +475,8 @@ export const EchoLeaderboard: React.FC = () => {
                                 {creator.totalEchos}
                             </td>
                              <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-purple-700 font-semibold">
-                                {creator.totalQueries}
+                                {creator.totalQueries.toLocaleString()}
                             </td>
-                            {/* <td className="px-3 py-3 whitespace-nowrap text-center text-sm text-gray-700 font-semibold">
-                                {creator.totalWalletTxs.toLocaleString()} 
-                            </td>
-                            <td className="px-3 py-3 whitespace-nowrap text-center text-sm font-semibold text-blue-700">
-                                {creator.highValueEchoRatio.toFixed(0)}% 
-                            </td> */}
                             <td className="px-3 py-3 whitespace-nowrap text-center text-md font-extrabold text-green-700">
                                 ${creator.totalEarnings.toFixed(2)}
                             </td>
@@ -524,7 +532,7 @@ export const EchoLeaderboard: React.FC = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {leaderboard.map((echo, index) => (
+            {leaderboard.map((echo: EchoStats, index: number) => (
               <tr key={echo.tokenId} className={index < 3 ? 'bg-yellow-50/50 hover:bg-yellow-100/50' : 'hover:bg-gray-50'}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   {index === 0 && <span className="text-3xl">🥇</span>}
@@ -630,15 +638,15 @@ export const EchoLeaderboard: React.FC = () => {
                 </div>
               )}
 
-              {/* Echo Leaderboard Table */}
-              <div className="animate-fade-in-delay-2">
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50">
-                  {renderLeaderboardTable()}
-                </div>
-              </div>
-            </>
-          )}
-      </div>
+          {/* Echo Leaderboard Table */}
+          <div className="animate-fade-in-delay-2">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50">
+              {renderLeaderboardTable()}
+            </div>
+          </div>
+        </>
+      )}
     </div>
-  );
+  </div>
+);
 };

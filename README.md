@@ -2,7 +2,6 @@
   <h1>EchoLink - Decentralized Knowledge Marketplace 🌐🧠</h1>
   <p>Mint your content (books, papers) as <b>AI Echo NFTs</b> powered by <b>ASI uAgents</b> and <b>MeTTa graphs</b>. Earn <b>PYUSD</b> micro-payments directly from users who query your Echo for verifiable insights, with all usage transparently tracked on <b>Blockscout</b>.
   <p>Built for <b>ETHOnline 2025</b>.</p>
-</div>
 
 <br>
 
@@ -20,6 +19,8 @@
 ![Data Layer](https://img.shields.io/badge/Knowledge_Graph-MeTTa_Graphs-lightgray)
 ![Vector DB](https://img.shields.io/badge/Vector_DB-FAISS_Indexer-blue)
 ![NLP](https://img.shields.io/badge/NLP_Extraction-REBEL_Model-red)
+
+</div>
 
 ---
 

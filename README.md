@@ -4,7 +4,7 @@
 
 ## 🌟 Overview
 
-EchoLink is a production-ready decentralized knowledge marketplace that revolutionizes how knowledge is created, owned, and accessed. Creators upload content (text, PDF, video, audio), which is automatically processed into structured knowledge graphs and minted as interactive Echo NFTs. Users can query these Echos using natural language, with flexible payment options including pay-per-query, credit subscriptions, and full ownership purchases.
+EchoLink is a decentralized knowledge marketplace that revolutionizes how knowledge is created, owned, and accessed. Creators upload content (text, PDF, video, audio), which is automatically processed into structured knowledge graphs and minted as interactive Echo NFTs. Users can query these Echos using natural language, with flexible payment options including pay-per-query, credit subscriptions, and full ownership purchases.
 
 The platform delivers a scalable real-world solution for knowledge monetization, combining blockchain ownership, multi-agent AI systems, and seamless payments to create new economic opportunities in the creator economy.
 

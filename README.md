@@ -1128,9 +1128,7 @@ EchoLink will continue evolving with cutting-edge features:
     
 *   **Team Members:** [@sharwin](https://github.com/xaviersharwin10), [@raksha](https://github.com/Raksha001)
 
-*   **Demo Link:** [Demo]()
-    
-*   **Pitch Deck Link:** [Pitch Deck]()
+*   **Demo Link:** [Demo - Project Showcase](https://ethglobal.com/showcase/echolink-1bhwn)
     
 *   **Contract Deployed Address [ECHOLINK NFT]:** **[0x39bc7190911b9334560ADfEf4100f1bE515fa3e1](https://eth-sepolia.blockscout.com/address/0x39bc7190911b9334560ADfEf4100f1bE515fa3e1)**
     

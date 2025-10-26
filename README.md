@@ -228,142 +228,169 @@ sequenceDiagram
     participant Wallet
     participant Contracts
     participant Blockchain
-    participant Backend/Agents
+    participant Agents as Backend/Agents
 
     %% --- 1. Creator Minting Echo (Creation Flow) ---
     Note over Creator, Blockchain: 1. Echo Creation & Minting
-    Creator->Frontend: Upload Content (PDF/Video/etc.)
-    Frontend->Backend/Agents: Process File (Extract, Embed)
-    Backend/Agents->Backend/Agents: Text -> Triples (REBEL) -> MeTTa Atoms -> Vector Embeddings (FAISS)
-    Backend/Agents->Contracts: Save Knowledge Base Info
-    Creator->Frontend: Fill Echo Details (Price, Name)
-    Creator->Wallet: Connect/Sign Transaction
-    Wallet->Contracts: mintEcho()
-    Contracts->Blockchain: Transaction Confirmation
-    Blockchain-->Frontend: Echo Listed (Success)
+    Creator->>Frontend: Upload Content (PDF/Video/etc.)
+    activate Frontend
+    Frontend->>Agents: Process File (Extract, Embed)
+    activate Agents
+    Agents->>Agents: Text -> Triples -> Atoms -> Embeddings
+    Agents->>Contracts: Save Knowledge Base Info
+    activate Contracts
+    Contracts-->>Agents: Info Saved
+    deactivate Contracts
+    Agents-->>Frontend: Knowledge Base Ready
+    deactivate Agents
+    Creator->>Frontend: Fill Echo Details (Price, Name)
+    Creator->>Wallet: Connect/Sign Transaction
+    activate Wallet
+    Wallet->>Contracts: mintEcho()
+    activate Contracts
+    Contracts->>Blockchain: Transaction Confirmation
+    activate Blockchain
+    Blockchain-->>Contracts: Confirmed
+    deactivate Blockchain
+    Contracts-->>Wallet: Minting Successful
+    deactivate Contracts
+    Wallet-->>Frontend: Echo Listed (Success)
+    deactivate Wallet
+    Frontend-->>Creator: Echo Listed (Success)
+    deactivate Frontend
 
-    rect rgb(230, 255, 230)
+    rect rgb(59, 151, 151)
     Note over User, Blockchain: 7. User Buying Credits
-    User->Frontend: Initiate Credit Purchase
-    Frontend->Wallet: Check Balance/Allowance
-    Wallet->Contracts: approve(PYUSD) (if needed)
-    Wallet->Contracts: purchaseCredits(amount)
-    Contracts->Blockchain: Mint Credits
-    Blockchain-->Frontend: Credit Balance Updated
+    User->>Frontend: Initiate Credit Purchase
+    activate Frontend
+    Frontend->>Wallet: Check Balance/Allowance
+    activate Wallet
+    Wallet->>Contracts: approve(PYUSD) (if needed)
+    activate Contracts
+    Contracts-->>Wallet: Approved
+    Wallet->>Contracts: purchaseCredits(amount)
+    Contracts->>Blockchain: Mint Credits
+    activate Blockchain
+    Blockchain-->>Contracts: Confirmed
+    deactivate Blockchain
+    Contracts-->>Wallet: Credits Minted
+    deactivate Contracts
+    Wallet-->>Frontend: Credit Balance Updated
+    deactivate Wallet
+    Frontend-->>User: Credit Balance Updated
+    deactivate Frontend
     end
 
     %% --- 4. User Buying Complete Echo (Full Ownership Flow) ---
-    rect rgb(255, 255, 230)
+    rect rgb(19, 36, 64)
     Note over User, Blockchain: 4. User Buying Complete Echo (Ownership)
-    User->Frontend: Select Echo & Buy
-    Frontend->Wallet: Check Balance/Allowance
-    Wallet->Contracts: approve(PYUSD) (if needed)
-    Wallet->Contracts: buyEcho(tokenId)
-    Contracts->Blockchain: Transfer PYUSD & Update Owner
-    Blockchain-->Frontend: Ownership Granted (Unlimited Access)
+    User->>Frontend: Select Echo & Buy
+    activate Frontend
+    Frontend->>Wallet: Check Balance/Allowance
+    activate Wallet
+    Wallet->>Contracts: approve(PYUSD) (if needed)
+    activate Contracts
+    Contracts-->>Wallet: Approved
+    Wallet->>Contracts: buyEcho(tokenId)
+    Contracts->>Blockchain: Transfer PYUSD & Update Owner
+    activate Blockchain
+    Blockchain-->>Contracts: Confirmed
+    deactivate Blockchain
+    Contracts-->>Wallet: Ownership Transferred
+    deactivate Contracts
+    Wallet-->>Frontend: Ownership Granted (Unlimited Access)
+    deactivate Wallet
+    Frontend-->>User: Ownership Granted
+    deactivate Frontend
     end
 
     %% --- 2 & 3. User Accessing Paid Echo (Query Flow - Micro-payment/Credits) ---
     Note over User, Blockchain: 2 & 3. User Accessing Paid Echo (Query)
-    User->Frontend: Select Echo & Enter Query
-    Frontend->Contracts: Check Ownership
+    User->>Frontend: Select Echo & Enter Query
+    activate Frontend
+    Frontend->>Contracts: Check Ownership
+    activate Contracts
+    Contracts-->>Frontend: Not Owned (Price needed)
+    deactivate Contracts
+    
     alt Paid with PYUSD (2)
-        User->Wallet: Sign Transaction (0.1 PYUSD)
-        Wallet->Contracts: approve(PYUSD) (if needed)
-        Wallet->Contracts: transferFrom() payment
-        Contracts->Blockchain: Transaction Confirmation (tx_hash)
-        Frontend->Backend/Agents: POST /query {query, tx_hash}
+        User->>Wallet: Sign Transaction (0.1 PYUSD)
+        activate Wallet
+        Wallet->>Contracts: approve(PYUSD) (if needed)
+        activate Contracts
+        Contracts-->>Wallet: Approved
+        Wallet->>Contracts: transferFrom() payment
+        Contracts->>Blockchain: Transaction Confirmation (tx_hash)
+        activate Blockchain
+        Blockchain-->>Contracts: Confirmed
+        deactivate Blockchain
+        Contracts-->>Wallet: Payment Complete
+        deactivate Contracts
+        Wallet-->>Frontend: Payment Tx Hash
+        deactivate Wallet
+        Frontend->>Agents: POST /query {query, tx_hash}
     else Paid with Credits (3)
-        User->Wallet: Submit useCreditsForQuery()
-        Wallet->Contracts: Deduct Credits
-        Contracts->Blockchain: Emit CreditsUsed Event
-        Frontend->Backend/Agents: POST /query {query, use_credits: true}
+        User->>Wallet: Submit useCreditsForQuery()
+        activate Wallet
+        Wallet->>Contracts: Deduct Credits
+        activate Contracts
+        Contracts->>Blockchain: Emit CreditsUsed Event
+        activate Blockchain
+        Blockchain-->>Contracts: Event Confirmed
+        deactivate Blockchain
+        Contracts-->>Wallet: Deduction Complete
+        deactivate Contracts
+        Wallet-->>Frontend: Credits Used
+        deactivate Wallet
+        Frontend->>Agents: POST /query {query, use_credits: true}
     end
-
-    Backend/Agents->Blockchain: Validate Payment (tx_hash or Event)
-    Backend/Agents->Backend/Agents: Load MeTTa Graph (Knowledge uAgent)
-    Backend/Agents->Backend/Agents: FAISS Search -> MeTTa Reasoning -> LLM Synthesize Answer
-    Backend/Agents-->Frontend: Return Answer
-    Frontend-->User: Display AI Answer
+    deactivate Frontend
+    
+    activate Agents
+    Agents->>Blockchain: Validate Payment (tx_hash or Event)
+    activate Blockchain
+    Blockchain-->>Agents: Payment Status
+    deactivate Blockchain
+    Agents->>Agents: Load MeTTa Graph (Knowledge uAgent)
+    Agents->>Agents: FAISS Search -> MeTTa Reasoning -> LLM Synthesize Answer
+    Agents-->>Frontend: Return Answer
+    deactivate Agents
+    activate Frontend
+    Frontend-->>User: Display AI Answer
+    deactivate Frontend
 
     %% --- 5. User Accessing Leaderboard ---
     Note over User, Blockchain: 5. Leaderboard Access
-    User->Frontend: Click Leaderboard
-    Frontend->Contracts: getAllTokenIds() / getEchoData()
-    Frontend->Blockchain: Fetch Query/Credits Events (Blockscout API)
-    Frontend->Frontend: Aggregate Metrics, Sort & Display
+    User->>Frontend: Click Leaderboard
+    activate Frontend
+    Frontend->>Contracts: getAllTokenIds() / getEchoData()
+    activate Contracts
+    Contracts-->>Frontend: Token Data
+    deactivate Contracts
+    Frontend->>Blockchain: Fetch Query/Credits Events (Blockscout API)
+    activate Blockchain
+    Blockchain-->>Frontend: Event Logs
+    deactivate Blockchain
+    Frontend->>Frontend: Aggregate Metrics, Sort & Display
+    Frontend-->>User: Display Leaderboard
+    deactivate Frontend
 
     %% --- 6. User Accessing AI Analyst Chatbot ---
     Note over User, Blockchain: 6. AI Analyst Chatbot
-    User->Frontend: Ask Question
-    Frontend->Backend/Agents: POST /ask {question}
-    Backend/Agents->Backend/Agents: LLM (ASI:One) binds Blockscout tools
-    Backend/Agents->Blockchain: Call MCP Tools (read_contract, get_address_info, etc.)
-    Blockchain-->Backend/Agents: Return Structured On-chain Data
-    Backend/Agents->Backend/Agents: LLM Processes Data & Generates Insight
-    Backend/Agents-->Frontend: Return Analysis + Charts
-    Frontend-->User: Display AI Analysis
-```
-
-
-```mermaid
-sequenceDiagram
-    participant Creator
-    participant User
-    participant Frontend
-    participant Wallet
-    participant Contracts
-    participant Backend/Agents
-    participant Blockchain
-
-    %% --- Initialization: Creation and Credit Setup ---
-    Note over Creator, Blockchain: System Setup (Creation & Credits)
-
-    Creator->Frontend: Upload Content
-    Frontend->Backend/Agents: Process & Embed Knowledge
-    Backend/Agents->Contracts: Save Echo Data
-    Creator->Wallet: Sign Mint
-    Wallet->Contracts: mintEcho()
-    Contracts->Blockchain: New Echo NFT Confirmed
-
-    User->Frontend: Initiate Credit Purchase
-    Wallet->Contracts: purchaseCredits(amount)
-    Contracts->Blockchain: Credit Balance Updated ✅
-
-    %% --- Core Interaction: Accessing the Echo (Micro-payment or Ownership) ---
-    Note over User, Blockchain: User Accessing Echos
-
-    User->Frontend: Browse Echos / Select Echo
-
-    alt User Buys Full Ownership (Flow 4)
-        User->Wallet: Sign Purchase
-        Wallet->Contracts: buyEcho(tokenId)
-        Contracts->Blockchain: Transfer PYUSD & Ownership
-        Blockchain-->User: Unlimited Access Granted
-    else User Performs Pay-per-Query (Flow 2 & 3)
-        User->Frontend: Submit Query
-        Frontend->Wallet: Initiate Payment (PYUSD or Credits)
-        Wallet->Contracts: Pay / Deduct Credits
-        Contracts->Blockchain: Confirm Payment / Event
-        Frontend->Backend/Agents: Request Answer
-        Backend/Agents->Backend/Agents: Validate & Run Reasoning (LLM + MeTTa)
-        Backend/Agents-->Frontend: Display AI Answer
-    end
-
-    %% --- Utility: System Monitoring and Analysis ---
-    Note over User, Blockchain: System Utilities (Leaderboard & AI Analyst)
-
-    User->Frontend: Access Leaderboard (Flow 5)
-    Frontend->Contracts: Read All Token IDs & Data
-    Frontend->Blockchain: Query Query/Credits Events (Blockscout API)
-    Frontend-->User: Display Leaderboard Metrics
-
-    User->Frontend: Open AI Analyst Chatbot (Flow 6)
-    Frontend->Backend/Agents: Send Question
-    Backend/Agents->Backend/Agents: LLM Binds Tools
-    Backend/Agents->Blockchain: Call MCP Tools (Read On-Chain Data)
-    Blockchain-->Backend/Agents: Return Analysis Data
-    Backend/Agents-->Frontend: Display AI Insight
+    User->>Frontend: Ask Question
+    activate Frontend
+    Frontend->>Agents: POST /ask {question}
+    activate Agents
+    Agents->>Agents: LLM (ASI:One) binds Blockscout tools
+    Agents->>Blockchain: Call MCP Tools (read_contract, get_address_info, etc.)
+    activate Blockchain
+    Blockchain-->>Agents: Return Structured On-chain Data
+    deactivate Blockchain
+    Agents->>Agents: LLM Processes Data & Generates Insight
+    Agents-->>Frontend: Return Analysis + Charts
+    deactivate Agents
+    Frontend-->>User: Display AI Analysis
+    deactivate Frontend
 ```
 
 ## 🚀 Getting Started

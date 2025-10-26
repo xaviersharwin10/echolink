@@ -456,26 +456,28 @@ class IntelligentQueryEngine:
 ### MeTTa Knowledge Graph Query Results:
 {chr(10).join([f"- {result.get('relation', 'Unknown')}: {result.get('entity', 'Unknown')} → {result.get('value', result.get('subject', 'Unknown'))}" for result in metta_results[:10]]) if metta_results else "No structured knowledge graph results available"}
 
+## CRITICAL INSTRUCTIONS
+**YOU MUST ONLY USE INFORMATION FROM THE CONTEXT ABOVE. DO NOT ADD ANY GENERAL KNOWLEDGE OR ASSUMPTIONS.**
+
 ## TASK
 Synthesize a comprehensive, accurate, and conversational answer by:
 
-1. **Direct Answer First**: Lead with the most direct answer to the user's question
-2. **Evidence-Based**: Ground your response in the facts and knowledge graph results provided
-3. **Contextual Intelligence**: 
-   - Connect related information from multiple facts
-   - Identify relationships between entities
-   - Explain "why" and "how" when relevant
+1. **Direct Answer First**: Lead with the most direct answer EXTRACTED from the facts above
+2. **Strict Evidence-Based**: 
+   - **ONLY** use information that appears in the semantic search results or MeTTa knowledge graph results
+   - **NEVER** add general domain knowledge or common sense reasoning
+   - **NEVER** say "based on the context" or "from the search results" - just state facts directly
+   - **NEVER** make assumptions about what typical optoelectronic devices are - only use what's explicitly in the facts
+3. **Citation Format**: 
+   - When referring to specific information, reference it naturally (e.g., "The material has X property")
+   - DO NOT say "According to research" or "Studies suggest" - just state the facts
 4. **Natural Conversation**: 
    - Use clear, engaging language
    - Structure your answer logically (main answer → supporting details)
    - Be concise but thorough
 5. **Uncertainty Handling**: 
-   - If information is incomplete, acknowledge limitations
-   - Distinguish between confirmed facts and reasonable inferences
-   - Never fabricate information not present in the context
-
-## OUTPUT FORMAT
-Provide your answer as a natural, conversational response. No prefixes, no markdown formatting, just clear prose.
+   - If information is incomplete in the provided facts, simply say "Based on the available information: [state only what's in the facts]"
+   - DO NOT fill gaps with general knowledge
 
 ## ANSWER:
 """

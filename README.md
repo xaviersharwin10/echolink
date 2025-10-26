@@ -192,7 +192,7 @@ EchoLink provides comprehensive blockchain analytics powered by Blockscout:
 ┌─────────────────────────────────────────────────────────┐
 │  Agentverse (Discovery & Hosting)                       │
 └─────────────────────────────────────────────────────────┘
-                              ↓
+                              ↓ REST calls to mailbox agents
 ┌─────────────────────────────────────────────────────────┐
 │           Orchestrator Agent (Registered)               │
 │  - Receives queries from frontend                       │

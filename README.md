@@ -1129,6 +1129,8 @@ EchoLink will continue evolving with cutting-edge features:
 *   **Team Members:** [@sharwin](https://github.com/xaviersharwin10), [@raksha](https://github.com/Raksha001)
 
 *   **Demo Link:** [Demo - Project Showcase](https://ethglobal.com/showcase/echolink-1bhwn)
+
+*   **UI Flow - Canva Link:** [UI Flow](https://www.canva.com/design/DAG25yOXu20/QvDIOIIIUdJWjy--7IE_Tw/edit?utm_content=DAG25yOXu20&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
     
 *   **Contract Deployed Address [ECHOLINK NFT]:** **[0x39bc7190911b9334560ADfEf4100f1bE515fa3e1](https://eth-sepolia.blockscout.com/address/0x39bc7190911b9334560ADfEf4100f1bE515fa3e1)**
     

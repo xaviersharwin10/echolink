@@ -187,8 +187,6 @@ EchoLink provides comprehensive blockchain analytics powered by Blockscout:
 ### Multi-Agent Architecture (ASI Alliance Integration)
 
 ```
-              [User via ASI:One Chat Protocol]
-                              ↓
                     [EchoLink Frontend]
                               ↓
 ┌─────────────────────────────────────────────────────────┐
@@ -209,7 +207,7 @@ EchoLink provides comprehensive blockchain analytics powered by Blockscout:
      └─────┬───────┘              └───────┬────────┘
            │                              │
            │ Validates blockchain         │
-           │ transactions (Web3.py)       │ Loads MeTTa Graph
+           │ transactions                 │ Loads MeTTa Graph
            │                              │
            │                              ├─→ FAISS Vector Search
            │                              ├─→ MeTTa Query Predicates

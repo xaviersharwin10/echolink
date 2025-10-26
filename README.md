@@ -521,7 +521,7 @@ function App() {
     return (
         <NotificationProvider>
             <TransactionPopupProvider>
-                <EchoLinkApp />
+                <App />
             </TransactionPopupProvider>
         </NotificationProvider>
     );
@@ -554,7 +554,7 @@ function EchoTxComponent() {
 }
 ```
 
-📘 Instructions on installation and usage available in the official (Blockscout App SDK Docs)[https://docs.blockscout.com/devs/blockscout-sdk]
+📘 Instructions on installation and usage available in the official [Blockscout App SDK Docs](https://docs.blockscout.com/devs/blockscout-sdk)
 
 ## 🔄 Workflow Sequences
 

@@ -1,6 +1,6 @@
 <div align="center">
   <h1>EchoLink - Decentralized Knowledge Marketplace 🌐🧠</h1>
-  <p>Mint your content (books, papers) as <b>AI Echo NFTs</b> powered by <b>ASI uAgents</b> and <b>MeTTa graphs</b>. Earn <b>PYUSD</b> micro-payments directly from users who query your Echo for verifiable insights, with all usage transparently tracked on <b>Blockscout</b>.
+  <p>Mint your content as <b>AI Echo NFTs</b> powered by <b>ASI uAgents</b> and <b>MeTTa graphs</b>. Earn <b>PYUSD</b> micro-payments directly from users who query your Echo for verifiable insights, with all usage transparently tracked on <b>Blockscout</b>.
   <p>Built for <b>ETHOnline 2025</b>.</p>
 
 <br>
@@ -29,6 +29,18 @@
 EchoLink is a decentralized knowledge marketplace that revolutionizes how knowledge is created, owned, and accessed. Creators upload content (text, PDF, video, audio), which is automatically processed into structured knowledge graphs and minted as interactive Echo NFTs. Users can query these Echos using natural language, with flexible payment options including pay-per-query, credit subscriptions, and full ownership purchases.
 
 The platform delivers a scalable real-world solution for knowledge monetization, combining blockchain ownership, multi-agent AI systems, and seamless payments to create new economic opportunities in the creator economy.
+
+
+## End-to-End Value Proposition
+
+| User Persona | Real-World Scenario | Quantifiable Impact |
+| :--- | :--- | :--- |
+| **🎓 The Professor (Dr. Sarah)** | Mints her entire MIT Quantum Physics course (3 years of lectures) as an Echo. | **Passive Income Stream:** Wakes up to $47 PYUSD overnight from 235 queries globally. Her knowledge now works 24/7 while she sleeps. **90-day result:** $4,200+ in micropayments from students worldwide. |
+| **🔬 The Researcher (Dr. James)** | Publishes his breakthrough cancer research methodology as an Echo (normally behind $50/month journal paywall). | **Democratized Access:** One-time query costs $0.50 vs. subscription. Researchers in 12 countries access his work. **Impact:** Knowledge discovery increased 340% through affordable access. |
+| **📚 The Student (Maria)** | Needs to understand Einstein's relativity for an exam tomorrow. | **Instant Expertise:** Asks "Why does time slow down near black holes?" gets precise explanation with mathematical proofs drawn from Einstein's complete works. **Time Saved:** 6 hours of reading → 2-minute query. **Result:** Scored 98/100. |
+| **💼 The Corporate Trainer (Mike)** | Works for a Fortune 500 company. Mints internal training content. | **Cost Efficiency:** Company saves $15,000/month on live training. Employees query Echo 24/7. **ROI:** 300% return in first quarter. Every employee has instant access to institutional knowledge. |
+| **🏥 The Medical Specialist (Dr. Lisa)** | Mints her 20-year collection of rare disease case studies. | **Lifesaving Speed:** Doctors worldwide query her Echo for rare diagnosis patterns. **Real Impact:** Reduced misdiagnosis rate by 40%. **Monetization:** Earns while helping save lives globally. |
+| **📈 The Protocol** | Facilitates transparency and trust through blockchain. | **Trustless Economy:** All 50,000+ transactions verified on-chain via Blockscout. **Creator Earnings:** $127,000+ distributed to 234 creators in 6 months. **Transparent Fees:** 5% sustains platform with full audit trail. |
 
 ### Core Integrations
 
@@ -137,17 +149,6 @@ EchoLink provides comprehensive blockchain analytics powered by Blockscout:
 - **Open Source**: Fully composable with other Web3 primitives
 - **Multi-Chain Ready**: MCP server provides unified interface across blockchain networks
 - **Production-Ready**: Enterprise-grade analytics for monitoring and optimization
-
-## End-to-End Value Proposition
-
-| User Persona | Real-World Scenario | Quantifiable Impact |
-| :--- | :--- | :--- |
-| **🎓 The Professor (Dr. Sarah)** | Mints her entire MIT Quantum Physics course (3 years of lectures) as an Echo. | **Passive Income Stream:** Wakes up to $47 PYUSD overnight from 235 queries globally. Her knowledge now works 24/7 while she sleeps. **90-day result:** $4,200+ in micropayments from students worldwide. |
-| **🔬 The Researcher (Dr. James)** | Publishes his breakthrough cancer research methodology as an Echo (normally behind $50/month journal paywall). | **Democratized Access:** One-time query costs $0.50 vs. subscription. Researchers in 12 countries access his work. **Impact:** Knowledge discovery increased 340% through affordable access. |
-| **📚 The Student (Maria)** | Needs to understand Einstein's relativity for an exam tomorrow. | **Instant Expertise:** Asks "Why does time slow down near black holes?" gets precise explanation with mathematical proofs drawn from Einstein's complete works. **Time Saved:** 6 hours of reading → 2-minute query. **Result:** Scored 98/100. |
-| **💼 The Corporate Trainer (Mike)** | Works for a Fortune 500 company. Mints internal training content. | **Cost Efficiency:** Company saves $15,000/month on live training. Employees query Echo 24/7. **ROI:** 300% return in first quarter. Every employee has instant access to institutional knowledge. |
-| **🏥 The Medical Specialist (Dr. Lisa)** | Mints her 20-year collection of rare disease case studies. | **Lifesaving Speed:** Doctors worldwide query her Echo for rare diagnosis patterns. **Real Impact:** Reduced misdiagnosis rate by 40%. **Monetization:** Earns while helping save lives globally. |
-| **📈 The Protocol** | Facilitates transparency and trust through blockchain. | **Trustless Economy:** All 50,000+ transactions verified on-chain via Blockscout. **Creator Earnings:** $127,000+ distributed to 234 creators in 6 months. **Transparent Fees:** 5% sustains platform with full audit trail. |
 
 ## 🏗️ Architecture
 

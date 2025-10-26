@@ -15,7 +15,6 @@
 ![Monetization](https://img.shields.io/badge/Monetization-PYUSD-informational)
 ![Smart Contracts](https://img.shields.io/badge/Contracts-Solidity-orange)
 ![EVM](https://img.shields.io/badge/Blockchain-EVM-blueviolet)
-![Web3.py](https://img.shields.io/badge/Web3_Client-Web3.py-darkblue)
 ![Data Layer](https://img.shields.io/badge/Knowledge_Graph-MeTTa_Graphs-lightgray)
 ![Vector DB](https://img.shields.io/badge/Vector_DB-FAISS_Indexer-blue)
 ![NLP](https://img.shields.io/badge/NLP_Extraction-REBEL_Model-red)

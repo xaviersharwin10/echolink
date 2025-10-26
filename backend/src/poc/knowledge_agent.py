@@ -132,6 +132,27 @@ class IntelligentQueryEngine:
         latest = max(knowledge_dirs, key=lambda p: p.stat().st_mtime)
         return latest.parent
     
+    def extract_token_id(self, text: str) -> Optional[str]:
+        """Extract token ID from text using various patterns"""
+        import re
+        
+        # Pattern 1: [token:xxx] or (token:xxx)
+        match = re.search(r'[\[\(]token:(\w+)[\]\)]', text.lower())
+        if match:
+            return match.group(1)
+        
+        # Pattern 2: token: xxx or token xxx
+        match = re.search(r'token[:\s]+(\w+)', text.lower())
+        if match:
+            return match.group(1)
+        
+        # Pattern 3: Look for "test_007" or similar patterns
+        match = re.search(r'\b(test_\d+|[a-z]+_\d+)\b', text.lower())
+        if match:
+            return match.group(1)
+        
+        return None
+    
     async def _load_knowledge_base(self):
         """Load the FAISS index and fact mapping"""
         try:

@@ -23,7 +23,7 @@ const MCP_API_BASE_URL = 'http://0.0.0.0:8080/v1';
 // Using ASI:One LLM
 const llm = new ChatOpenAI({
   model: "asi1-mini",
-  apiKey: "",
+  apiKey: "", //Add your ASI:One API key
   configuration: {
     baseURL: "https://api.asi1.ai/v1",
     defaultHeaders: { "X-Title": "EchoLink Protocol" }
@@ -33,6 +33,7 @@ const llm = new ChatOpenAI({
 const ECHO_NFT_ADDRESS = '0x39bc7190911b9334560ADfEf4100f1bE515fa3e1';
 const QUERY_PAYMENTS_ADDRESS = '0xFf08e351Bf16fE0703108cf9B4AeDe3a16fd0a46'; 
 const PYUSD_ADDRESS = '0xCaC524BcA292aaade2df8a05cC58F0a65B1B3bB9'; 
+const CHAIN_ID = '11155111'; // Sepolia Chain ID
 
 // --- MIDDLEWARE ---
 app.use(cors());
@@ -58,7 +59,10 @@ if (!fs.existsSync(ORIGINAL_FILES_DIR)) {
 
 console.log('📁 Storage directories initialized:', { UPLOADS_DIR, CONTENT_DIR, ORIGINAL_FILES_DIR });
 
-// --- THE BLOCKSCOUT MCP TOOLBOX ---
+// =======================================================
+// === THE BLOCKSCOUT MCP TOOLBOX ===
+// =======================================================
+// Binding a comprehensive set of Blockscout MCP tools for the LLM agent
 const llmWithTools = llm.bindTools([
   {
     name: "get_address_info",
@@ -99,17 +103,29 @@ const llmWithTools = llm.bindTools([
   },
   {
     name: "read_contract",
-    description: "Executes a read-only, view function on a smart contract. Requires a JSON-encoded function ABI.",
+    description: "Executes a read-only, view function on a smart contract. Requires a JSON-encoded function ABI fragment.",
     schema: {
         type: "object",
         properties: {
           chain_id: { type: "string", description: "The chain ID." },
           address: { type: "string", description: "The smart contract address." },
           function_name: { type: "string", description: "Name of the function to call (e.g., 'ownerOf')." },
-          abi: { type: "string", description: "REQUIRED: JSON-encoded single function ABI fragment." },
+          abi: { type: "string", description: "REQUIRED: JSON-encoded single function ABI fragment. Use get_contract_abi first to find this." },
           args: { type: "string", description: "JSON-encoded array of function arguments (e.g., '[1]')." },
         },
         required: ["chain_id", "address", "function_name", "abi"],
+    },
+  },
+  {
+    name: "get_contract_abi",
+    description: "Retrieves the full ABI (Application Binary Interface) for a smart contract. Use this to find the function signature needed for the 'read_contract' tool.",
+    schema: {
+        type: "object",
+        properties: {
+          chain_id: { type: "string", description: "The chain ID." },
+          address: { type: "string", description: "The smart contract address." },
+        },
+        required: ["chain_id", "address"],
     },
   },
   {
@@ -124,11 +140,16 @@ const llmWithTools = llm.bindTools([
 ]);
 
 
-// --- HELPER FUNCTION TO CALL YOUR LOCAL MCP SERVER ---
+// =======================================================
+// === HELPER FUNCTION: LOCAL MCP SERVER CALL ===
+// =======================================================
 async function callMcpTool(toolName, params) {
     if (toolName === 'get_address_by_ens_name') {
-        params.chain_id = '1'; // ENS resolution always happens on Mainnet
+        params.chain_id = '1'; // Standard ENS resolution is on Mainnet
+    } else if (!params.chain_id) {
+        params.chain_id = CHAIN_ID; // Default to Sepolia
     }
+
     const query = new URLSearchParams(params).toString();
     console.log(`--- Calling Local MCP Server Tool: ${toolName} with params: ${query} ---`);
     
@@ -136,16 +157,151 @@ async function callMcpTool(toolName, params) {
       const response = await fetch(`${MCP_API_BASE_URL}/${toolName}?${query}`);
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`MCP server responded with an error: ${response.statusText} - ${errorText}`);
+        // Return a structured error response for the LLM to process
+        return JSON.stringify({ error: `MCP server error: ${response.statusText}`, details: errorText }); 
       }
       const data = await response.json();
       console.log('--- Received response from MCP Server ---');
       return JSON.stringify(data.data); 
     } catch (error) {
       console.error('Error calling MCP Server:', error);
-      return `Error: Tool call failed. ${error.message}`;
+      return JSON.stringify({ error: `Tool call failed: ${error.message}` });
     }
 }
+
+
+// =======================================================
+// === API ENDPOINT: AI ANALYST CHAT ===
+// =======================================================
+app.post('/ask', async (req, res) => {
+  const { question, connectedAddress } = req.body;
+  if (!question) return res.status(400).json({ error: 'Question is required' });
+
+  console.log(`Received question: "${question}" for address: ${connectedAddress}`);
+
+  // ABI for getting total number of Echos
+  const GET_ALL_TOKEN_IDS_ABI = JSON.stringify({
+    "inputs": [],
+    "name": "getAllTokenIds",
+    "outputs": [
+      { "internalType": "uint256[]", "name": "", "type": "uint256[]" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  });
+
+  // ABI for reading a single Echo's data
+  const GET_ECHO_DATA_ABI = JSON.stringify({
+    "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
+    "name": "getEchoData",
+    "outputs": [
+      { "internalType": "string", "name": "name", "type": "string" },
+      { "internalType": "string", "name": "description", "type": "string" },
+      { "internalType": "address", "name": "creator", "type": "address" },
+      { "internalType": "uint256", "name": "pricePerQuery", "type": "uint256" },
+      { "internalType": "uint256", "name": "purchasePrice", "type": "uint256" },
+      { "internalType": "bool", "name": "isActive", "type": "bool" },
+      { "internalType": "bool", "name": "isForSale", "type": "bool" },
+      { "internalType": "address", "name": "owner", "type": "address" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  });
+
+  // --- THE SUPER PROMPT ---
+  const systemPromptContent = `You are 'Echo Analyst', a master on-chain analyst for the EchoLink Protocol. Your goal is to provide rich, insightful, and sometimes visual answers using your Blockscout MCP tools.
+
+      **ECHO LINK CONTEXT & KEY ADDRESSES:**
+      - The user is operating within the EchoLink NFT marketplace.
+      - User's Connected Wallet: **${connectedAddress || 'Not Connected'}** (Referenced as 'my wallet' or 'I').
+      - Network Chain ID: **${CHAIN_ID}** (Sepolia).
+      - Query Payments Contract: **${QUERY_PAYMENTS_ADDRESS}** (Processes direct payments).
+      - EchoLink NFT Contract (Contains Echo metadata and Tracks Echos, Token ID ownership, and Credits)., function names: getAllTokenIds, getEchoData): **${ECHO_NFT_ADDRESS}**
+      - PYUSD Token Contract: **${PYUSD_ADDRESS}** (The asset of interest for all payments).
+      
+      **CRITICAL DATA CONVERSION PROTOCOL (MANDATORY):**
+      - **PYUSD Value:** PYUSD has 6 decimal places. The raw unit returned by contracts MUST be divided by **1,000,000 (10^6)** to get the final dollar amount.
+      - **Protocol Fee:** The net amount earned by the creator is **95%** of the gross payment (5% protocol fee).
+      
+      **CRITICAL INSTRUCTION:** For the most accurate financial data (earnings, payments), **always prioritize the 'get_token_transfers_by_address' tool, filtering by the PYUSD address.**
+      - getAllTokenIds() ABI (to get all minted IDs): ${GET_ALL_TOKEN_IDS_ABI}
+      - getEchoData() ABI (to get specific Echo details): ${GET_ECHO_DATA_ABI}
+      
+      **CRITICAL INSTRUCTION:** For the key contract addresses above, you MUST use the provided hexadecimal addresses directly.
+      --- START INTERNAL PLANNING MANDATE (DO NOT OUTPUT THIS CONTENT) ---
+
+      **INTERNAL REASONING STEPS:**
+      1.  **Intent Check:** Determine the user's primary goal (e.g., "popular echo", "my balance", "trace flow", "profitability of creator").
+      2.  **Popularity/Ranking (DYNAMIC DATA):** If asked about ranking, or creator earnings, you MUST perform a multi-step query:
+          * Step 1: Execute \`read_contract\` on **EchoLink NFT Contract** to fetch all existing Token IDs (using the \`getAllTokenIds\` function).
+          * Step 2: Iterate through the returned Token IDs. For each ID, call \`read_contract\` for the creator's address (using the \`getEchoData\` function).
+          * **Step 3: Analyze each creator address by calling \`get_token_transfers_by_address\` (filtered by PYUSD and network ID) to calculate and rank total financial earnings.**
+      3.  **Name-to-ID Lookup (CRITICAL FIRST STEP):** If the user provides an Echo Name (e.g., "Xavier - The biography") instead of an ID, you MUST first call \`read_contract\` on the \`EchoLink NFT Contract\` using the **getAllTokenIds() ABI** to fetch all existing Token IDs. Then, for each ID, call \`read_contract\` with the **getEchoData() ABI** to fetch its name and internally find the corresponding \`tokenId\`. Only then can you proceed with the analysis using the ID.
+      4.  **Contract Status:** If asked about specific Echo data, use the \`read_contract\` tool on the \`EchoLink NFT Contract\` with the **getEchoData() ABI**.
+      4.  **Flow Tracing:** If asked about payments or flow, use \`get_token_transfers_by_address\` filtering by PYUSD. For detailed event verification (e.g., CreditsUsed event), use \`get_transaction_logs\`.
+      5.  **Final Synthesis:** Synthesize all verified data into a professional, direct report, applying the **CRITICAL DATA CONVERSION PROTOCOL** and adhering to the **FINAL OUTPUT MANDATE**.
+
+      --- END INTERNAL PLANNING MANDATE ---
+
+      **FINAL OUTPUT MANDATE:** Your response must be a synthesized, polite, and professional report, **using bold Markdown for key metrics and rankings**. For any data suitable for comparison (balances, transactions), you **MUST** output a simplified \`[CHART_DATA]\` JSON structure containing \`type\`, \`labels\`, and \`data\` arrays. You MUST NOT mention the names of the tools you use, the reasoning steps, or any internal planning.
+      **Provide Visual Data When Logical:** For any question that involves comparing 2 or more items (e.g., transaction counts, token balances, creator revenue), you MUST format the data for a chart. To do this, embed a special JSON block in your answer like this:
+        \`\`\`
+        [CHART_DATA]
+        {
+          "type": "bar",
+          "title": "Echo Creator Revenue Ranking",
+          "labels": ["Echo ID 10", "Echo ID 5"],
+          "data": [1250.75, 800.20]
+        }
+        [/CHART_DATA]
+        \`\`\`
+      Combine your text analysis and your chart data into a single, comprehensive Markdown response.
+
+      Begin your comprehensive analysis for the user's request: "${question}"`;
+  
+  const messages = [new HumanMessage({ content: systemPromptContent })];
+
+  try {
+    let response = await llmWithTools.invoke(messages);
+    let conversationHistory = [...messages, response];
+
+    while (response.tool_calls && response.tool_calls.length > 0) {
+      const toolMessagePromises = response.tool_calls.map(async (toolCall) => {
+        // // Find the correct ABI if the LLM is calling 'read_contract'
+        // if (toolCall.name === 'read_contract') {
+        //      // In a real advanced app, the LLM would call get_contract_abi, 
+        //      // but here we demonstrate the logic by using pre-defined ABIs based on the function name.
+        //      // This is done to prevent excessive tool calls in a hackathon demo.
+        //     if (toolCall.args.function_name === 'getAllTokenIds') {
+        //         toolCall.args.abi = GET_ALL_TOKEN_IDS_ABI;
+        //     } else if (toolCall.args.function_name === 'getEchoData') {
+        //         toolCall.args.abi = GET_ECHO_DATA_ABI;
+        //     } else {
+        //         console.warn(`Attempted to call unknown read_contract function: ${toolCall.args.function_name}`);
+        //     }
+        // }
+        
+        const toolResponse = await callMcpTool(toolCall.name, toolCall.args);
+        return new ToolMessage({
+          content: toolResponse,
+          tool_call_id: toolCall.id,
+        });
+      });
+
+      const toolMessages = await Promise.all(toolMessagePromises);
+      conversationHistory.push(...toolMessages);
+      
+      console.log(`Sending ${toolMessages.length} tool response(s) back to LLM...`);
+      response = await llmWithTools.invoke(conversationHistory);
+      conversationHistory.push(response);
+    }
+    
+    return res.json({ answer: response.content });
+  } catch (error) {
+    console.error('Error in AI flow:', error);
+    res.status(500).json({ error: 'Failed to process the AI request due to an internal system error.' });
+  }
+});
 
 // --- MULTI-AGENT SYSTEM INTEGRATION ---
 app.post('/query', async (req, res) => {
@@ -216,124 +372,6 @@ app.post('/query', async (req, res) => {
   }
 });
 
-// --- AI ANALYST ENDPOINT (Blockscout MCP Interface) ---
-app.post('/ask', async (req, res) => {
-  const { question, connectedAddress } = req.body;
-  if (!question) return res.status(400).json({ error: 'Question is required' });
-
-  console.log(`Received question: "${question}" for address: ${connectedAddress}`);
-
-  // ABI for getting total number of Echos
-  const GET_ALL_TOKEN_IDS_ABI = JSON.stringify({
-    "inputs": [],
-    "name": "getAllTokenIds",
-    "outputs": [
-      { "internalType": "uint256[]", "name": "", "type": "uint256[]" }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  });
-
-  // ABI for reading a single Echo's data
-  const GET_ECHO_DATA_ABI = JSON.stringify({
-    "inputs": [{"internalType": "uint256", "name": "tokenId", "type": "uint256"}],
-    "name": "getEchoData",
-    "outputs": [
-      { "internalType": "string", "name": "name", "type": "string" },
-      { "internalType": "string", "name": "description", "type": "string" },
-      { "internalType": "address", "name": "creator", "type": "address" },
-      { "internalType": "uint256", "name": "pricePerQuery", "type": "uint256" },
-      { "internalType": "uint256", "name": "purchasePrice", "type": "uint256" },
-      { "internalType": "bool", "name": "isActive", "type": "bool" },
-      { "internalType": "bool", "name": "isForSale", "type": "bool" },
-      { "internalType": "address", "name": "owner", "type": "address" }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  });
-
-  // --- THE SUPER PROMPT ---
-  const systemPromptContent = `You are 'Echo Analyst', a master on-chain analyst for the EchoLink Protocol. Your goal is to provide rich, insightful, and sometimes visual answers using your Blockscout MCP tools.
-
-      **ECHO LINK CONTEXT & KEY ADDRESSES:**
-      - The user is operating within the EchoLink NFT marketplace.
-      - User's Connected Wallet: **${connectedAddress || 'Not Connected'}** (Referenced as 'my wallet' or 'I').
-      - EchoLink NFT Contract: **${ECHO_NFT_ADDRESS}** (Tracks Echos, Token ID ownership, and Credits).
-      - Query Payments Contract: **${QUERY_PAYMENTS_ADDRESS}** (Processes direct payments).
-      - PYUSD Token Contract: **${PYUSD_ADDRESS}** (The asset of interest for all payments).
-      
-      **CRITICAL DATA CONVERSION PROTOCOL (MANDATORY):**
-      - **PYUSD Value:** PYUSD has 6 decimal places. The raw unit returned by contracts MUST be divided by 1,000,000 (10^6) to get the final dollar amount.
-      - **Protocol Fee:** The net amount earned by the creator is 95% of the gross payment (5% fee).
-      
-      **CRITICAL ABIs (Use with read_contract tool):**
-      - getAllTokenIds() ABI (to get all minted IDs): ${GET_ALL_TOKEN_IDS_ABI}
-      - getEchoData() ABI (to get specific Echo details): ${GET_ECHO_DATA_ABI}
-      
-      **CRITICAL INSTRUCTION:** For the key contract addresses above, you MUST use the provided hexadecimal addresses directly.
-      
-      
-      --- START INTERNAL PLANNING MANDATE (DO NOT OUTPUT THIS CONTENT) ---
-
-      **INTERNAL REASONING STEPS:**
-      1.  **Intent Check:** Determine the user's primary goal (e.g., "popular echo", "my balance", "trace flow", "profitability of creator").
-      2.  **Popularity/Ranking (DYNAMIC DATA):** If asked about popularity, ranking, or creator earnings, you MUST perform a multi-step query:
-          * Step 1: Execute \`read_contract\` on **EchoLink NFT Contract** using the **getAllTokenIds() ABI** to fetch all existing Token IDs.
-          * Step 2: Iterate through the returned Token IDs. For each ID, call \`read_contract\` with the **getEchoData() ABI** to fetch its details, and use \`get_address_info\` for the creator's address to get a TX count (proxy for popularity).
-          * Step 3: Compare and rank the Echos based on the collected activity data.
-      3.  **Name-to-ID Lookup (CRITICAL FIRST STEP):** If the user provides an Echo Name (e.g., "Xavier - The biography") instead of an ID, you MUST first call \`read_contract\` on the \`EchoLink NFT Contract\` using the **getAllTokenIds() ABI** to fetch all existing Token IDs. Then, for each ID, call \`read_contract\` with the **getEchoData() ABI** to fetch its name and internally find the corresponding \`tokenId\`. Only then can you proceed with the analysis using the ID.
-      4.  **Contract Status:** If asked about specific Echo data, use the \`read_contract\` tool on the \`EchoLink NFT Contract\` with the **getEchoData() ABI**.
-      5.  **Flow Tracing:** If asked about payments or flow, use \`get_token_transfers_by_address\` filtering by PYUSD and the relevant contract address.
-      6.  **Final Synthesis:** Synthesize all verified data into a professional, direct report, applying the **CRITICAL DATA CONVERSION PROTOCOL** for all PYUSD values, and adhering to the **FINAL OUTPUT MANDATE** for formatting and charting.
-
-      --- END INTERNAL PLANNING MANDATE ---
-
-      **FINAL OUTPUT MANDATE:** Your response must be a synthesized, polite, and professional report, **using bold Markdown for key metrics and rankings**, and beginning directly with the answer. For any data suitable for comparison (balances, transactions), you **MUST** output a simplified \`[CHART_DATA]\` JSON structure containing only \`type\`, \`labels\`, and \`data\` arrays. You MUST NOT mention the names of the tools you use, the reasoning steps, or any internal planning.
-      **Provide Visual Data When Logical:** For any question that involves comparing 2 or more items (e.g., transaction counts, token balances), you MUST format the data for a chart. To do this, embed a special JSON block in your answer like this:
-        \`\`\`
-        [CHART_DATA]
-        {
-          "type": "bar",
-          "title": "Creator Transaction Activity",
-          "labels": ["Creator A Address", "Creator B Address"],
-          "data": [150, 85]
-        }
-        [/CHART_DATA]
-        \`\`\`
-      Combine your text analysis and your chart data into a single, comprehensive Markdown response.
-
-      Begin your comprehensive analysis for the user's request: "${question}"`;
-  
-  const messages = [new HumanMessage({ content: systemPromptContent })];
-
-  try {
-    let response = await llmWithTools.invoke(messages);
-    let conversationHistory = [...messages, response];
-
-    while (response.tool_calls && response.tool_calls.length > 0) {
-      const toolMessagePromises = response.tool_calls.map(async (toolCall) => {
-        const toolResponse = await callMcpTool(toolCall.name, toolCall.args);
-        return new ToolMessage({
-          content: toolResponse,
-          tool_call_id: toolCall.id,
-        });
-      });
-
-      const toolMessages = await Promise.all(toolMessagePromises);
-      conversationHistory.push(...toolMessages);
-      
-      console.log(`Sending ${toolMessages.length} tool response(s) back to LLM...`);
-      response = await llmWithTools.invoke(conversationHistory);
-      conversationHistory.push(response);
-    }
-    
-    return res.json({ answer: response.content });
-  } catch (error) {
-    console.error('Error in AI flow:', error);
-    // Send a safe, general error response
-    res.status(500).json({ error: 'Failed to process the AI request due to an internal system error.' });
-  }
-});
 
 // --- CONTENT STORAGE ENDPOINTS ---
 

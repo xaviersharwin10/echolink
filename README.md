@@ -43,113 +43,104 @@ The platform delivers a scalable real-world solution for knowledge monetization,
 | **🔍 The Analyst (Alex)** | Wants to find the best quantum computing Echo on the platform. | **AI-Powered Discovery:** Asks AI analyst chatbot "What's the highest performing Echo for quantum algorithms?" Gets intelligent analysis comparing 50+ Echos using Blockscout MCP on-chain data. **Result:** Finds perfect Echo in 30 seconds vs. 2 hours of manual browsing. |
 | **📈 The Protocol** | Facilitates transparency and trust through blockchain. | **Trustless Economy:** All 50,000+ transactions verified on-chain via Blockscout. **Creator Earnings:** $127,000+ distributed to 234 creators in 6 months. **Transparent Fees:** 5% sustains platform with full audit trail. |
 
-### Core Integrations
+## 🛠️ Core Architecture and Key Features
 
-**🤖 ASI Alliance Integration (uAgents + MeTTa + ASI:One)**
-- **Multi-Agent Architecture**: Three specialized agents (Orchestrator, Payment, Knowledge) working in concert to deliver seamless query processing
-- **MeTTa Knowledge Graphs**: Advanced structured reasoning with entity-relation-value triples enables deep semantic understanding
-- **ASI:One Integration**: Natural human-agent interaction through Web3-native language model synthesis
-- **Agentverse Deployment**: All agents registered and discoverable on Agentverse:
+This section details the integrated technologies and the features they enable, combining the core integrations with their resulting capabilities.
+
+### 🤖 Multi-Agent AI System (ASI Alliance Integration)
+
+EchoLink implements a robust **Multi-Agent Architecture** leveraging the ASI Alliance stack for seamless, sophisticated query processing.
+
+| Feature | Description | Core Integration/Agent | 
+ | ----- | ----- | ----- | 
+| **Specialized Agents** | Three agents work in concert to deliver a seamless workflow: **Orchestrator**, **Payment**, and **Knowledge** Agents. | **uAgents** | 
+| **Agent Coordination** | Intelligently routes incoming queries based on context and ownership status and ensures secure agent-to-agent messaging. | **Orchestrator Agent** (Agentverse) & **Fetch.ai Almanac** | 
+| **Real-Time Payment Validation** | Validates blockchain transactions in real-time, checking PYUSD transfers and credit usage with secure Web3.py verification. | **Payment Agent** (Agentverse) | 
+| **Advanced Query Processing** | Processes natural language queries through multi-stage reasoning: FAISS vector search $\rightarrow$ MeTTa predicate queries $\rightarrow$ ASI:One synthesis. | **Knowledge Agent** (Agentverse) | 
+| **Structured Reasoning** | Advanced structured reasoning with entity-relation-value triples enables deep semantic understanding. | **MeTTa Knowledge Graphs** | 
+| **Natural Interaction** | Provides intuitive conversational interface, making advanced AI reasoning accessible to all users. | **ASI:One Integration** & **Chat Protocol** | 
+| **Agent Discovery** | All specialized agents are registered and discoverable on Agentverse. | **Agentverse Deployment** | 
+
+**Agentverse Deployment Links:** All agents registered and discoverable on Agentverse:
   - [Orchestrator Agent](https://agentverse.ai/agents/details/agent1qwvu2g779cjyna0dzcs2klw6w2s6v323xkqguypzj05vdk0xrdc3wkjp3wq/profile) - Routes queries and coordinates workflows
   - [Payment Agent](https://agentverse.ai/agents/details/agent1qgmcaux67tuhrkl9cwhns0npxclvksy66yarp32j4f8zkedrhqjys597p08/profile) - Validates blockchain transactions
   - [Knowledge Agent](https://agentverse.ai/agents/details/agent1q2x577ul5d6r20c4alcx64pcersrusm7j4pekkce05cu22kpxz9hux72t3t/profile) - Processes queries using MeTTa reasoning
-- **Chat Protocol**: Direct conversational interface enabling users to interact with AI agents naturally
-
-**💳 PayPal PYUSD Payment System**
-- **Microtransactions**: Pay-per-query model enables granular monetization of knowledge
-- **Subscription Model**: Credit system (1 PYUSD = 100 credits, 1 credit = 0.01 PYUSD) for flexible access
-- **One-Time Purchase**: Buy full Echo NFTs for unlimited lifetime access
-- **Smart Contract Integration**: Direct PYUSD transfers with ERC-20 compatibility and transparent fees
-- **Consumer Experience**: Rainbow wallet integration with one-click payments and instant processing
-
-**🔍 Blockscout Analytics Platform**
-- **AI-Powered Analytics**: Model Context Protocol (MCP) chatbot provides intelligent blockchain insights
-- **Transaction Tracking**: Real-time notifications and status updates via Blockscout SDK
-- **Explorer Integration**: Direct access to verified transaction data and contract interactions
-- **Performance Metrics**: Comprehensive analytics on Echo performance, creator earnings, and platform activity
-
-**⛓️ Blockchain Infrastructure**
-- Deployed in Ethereum sepolia testnet
-- ERC-721 EchoNFT contract for ownership and access control
-- ERC-20 PYUSD integration for standardized payments
-
-## ✨ Key Features
-
-### 🤖 Multi-Agent AI System (ASI Alliance)
-EchoLink implements a production-grade multi-agent architecture demonstrating advanced agent collaboration:
-
-- **Orchestrator Agent** (Deployed on Agentverse): Intelligently routes incoming queries to appropriate specialized agents based on context and ownership status
-- **Payment Agent** (Deployed on Agentverse): Validates blockchain transactions in real-time, checking PYUSD transfers and credit usage with secure Web3.py verification
-- **Knowledge Agent** (Deployed on Agentverse): Processes natural language queries through multi-stage reasoning: FAISS vector search → MeTTa predicate queries → ASI:One synthesis
-- **Agent Communication**: Secure agent-to-agent messaging via Fetch.ai Almanac enables seamless coordination
-- **Human-Agent Interaction**: ASI:One Chat Protocol provides intuitive conversational interface, making advanced AI reasoning accessible to all users
 
 ### 🧠 MeTTa Knowledge Graph Reasoning
-EchoLink leverages MeTTa for sophisticated symbolic reasoning over knowledge:
 
-- **REBEL Extraction**: Extracts precise triples (subject-relation-object) from PDF, video, audio, and text documents
-- **MeTTa Representation**: Converts triples into MeTTa atoms for symbolic reasoning and inference
-- **Dual Search Strategy**: Combines FAISS vector embeddings for semantic similarity with MeTTa query predicates for logical inference
-- **Complex Reasoning**: Execute queries like `!(query relation entity)` and inverse queries for comprehensive fact retrieval
-- **Source Provenance**: Every piece of knowledge maintains attribution and traceability to original content
+EchoLink leverages **MeTTa (Meta-Type Theoretical Language)** for sophisticated symbolic reasoning over knowledge, ensuring complex and traceable fact retrieval.
 
-### 💳 PayPal PYUSD Payment Integration
-EchoLink demonstrates transformative use of PYUSD for knowledge commerce:
+| Feature | Description | 
+ | ----- | ----- | 
+| **Triple Extraction** | Extracts precise knowledge triples (subject-relation-object) from diverse file formats (PDF, video, audio, text) using the **REBEL Extraction** model. | 
+| **Symbolic Representation** | Converts knowledge triples into **MeTTa atoms** for symbolic reasoning and logical inference. | 
+| **Dual Search Strategy** | Combines **FAISS vector embeddings** for semantic similarity with **MeTTa query predicates** for precise logical inference. | 
+| **Complex Queries** | Supports complex reasoning queries like `!(query relation entity)` and inverse queries for comprehensive fact retrieval. | 
+| **Source Provenance** | Every piece of knowledge maintains clear **attribution and traceability** to its original source content. | 
 
-**Flexible Payment Models**
-- **Pay-Per-Query**: Direct microtransactions for one-time knowledge access (e.g., 0.1 PYUSD per query)
-- **Credit Subscriptions**: Buy credits in bulk (1 PYUSD = 100 credits) for frequent users
-- **Full Ownership**: Purchase entire Echo NFT for unlimited lifetime access (one-time purchase model)
+### 💳 PayPal PYUSD Payment System
 
-**Technical Implementation**
-- **Smart Contract Integration**: Direct PYUSD ERC-20 transfers in EchoNFT contract with transferFrom and allowance patterns
-- **Payment Validation**: On-chain verification ensures secure, immutable payment tracking
-- **Protocol Economics**: Transparent 5% fee supports platform sustainability while rewarding creators
-- **Consumer Experience**: Seamless Rainbow wallet integration with automatic transaction tracking via Blockscout SDK
+EchoLink demonstrates the transformative use of **PayPal PYUSD** for secure, granular **knowledge commerce** and microtransactions.
 
-**Real-World Value**
-- Enables microtransactions previously impractical with high gas fees
-- Supports global knowledge commerce without currency barriers
-- Creates sustainable economics for knowledge creators and platform
+| Payment Model/Feature | Description | Technical Implementation | 
+ | ----- | ----- | ----- | 
+| **Pay-Per-Query** | Direct **microtransactions** for one-time knowledge access (e.g., 0.1 PYUSD per query). | Smart Contract Integration with ERC-20 `transferFrom` and allowance patterns. | 
+| **Credit Subscriptions** | Buy credits in bulk (**1 PYUSD = 100 credits**, 1 credit = 0.01 PYUSD) for frequent, flexible access. | On-chain verification of PYUSD transfers and credit usage tracked by the **Payment Agent**. | 
+| **Full Ownership** | **One-Time Purchase** model: Buy the full Echo NFT for unlimited lifetime access to the knowledge. | **ERC-721 EchoNFT contract** for ownership and access control. | 
+| **Consumer Experience** | Seamless **Rainbow wallet integration** with one-click payments and instant processing. | Automatic transaction tracking via **Blockscout SDK**. | 
+| **Protocol Economics** | Transparent **5% fee** supports platform sustainability while ensuring creators are fairly rewarded for their knowledge. | Creator earnings and query volume calculated using trustless event logs (`QueryPaid`, `CreditsUsed`, `EchoPurchased`). | 
+| **Real-World Value** | Enables microtransactions previously impractical with high gas fees, supports global commerce, and creates sustainable economics for creators. | Facilitated by low-cost blockchain infrastructure. | 
+
+### 📊 Blockscout Analytics Platform
+
+EchoLink leverages **Blockscout** to provide comprehensive, trustless blockchain analytics and real-time monitoring.
+
+| Feature | Description | Core Integration | 
+ | ----- | ----- | ----- | 
+| **AI-Powered Insights** | The **MCP Chatbot** (Model Context Protocol) provides intelligent, AI-reasoned blockchain insights. | **Model Context Protocol (MCP)** Chatbot | 
+| **Natural Language Queries** | Users can ask questions like "What's the highest performing Echo?" and get AI-reasoned answers using MCP tools (e.g., `read_contract`, `get_token_transfers`). | **MCP Chatbot** & On-Chain Intelligence | 
+| **Trustless Ledger Calculations** | Creator earnings, query volume, and Echo purchases are computed directly from event logs (`QueryPaid`, `CreditsUsed`, `EchoPurchased`) ensuring transparency and eliminating centralized dependencies. | **Blockscout MCP/API** |
+| **Real-Time Tracking** | Provides real-time notifications and status updates for transactions via the Blockscout SDK. | **Blockscout SDK** | 
+| **Explorer Integration** | Seamless links to Blockscout explorer for transaction verification and contract interactions. | **Blockscout SDK** | 
+| **Leaderboard Analytics** | Dynamic, on-chain leaderboards display top-performing Echos and creators(earnings, query volume, etc). Rankings are derived from real-time event logs to ensure accuracy and fairness. Includes visualizations for protocol stats, price distribution and activity trends. | **Blockscout API/MCP** |
+| **User Experience Enhancements** | Real-time payment confirmations, analytics dashboards, and explorer-linked transparency enhance user confidence and engagement. | **Blockscout SDK/API** |
+| **Performance Metrics** | Comprehensive analytics on Echo performance, creator earnings, and platform activity. | Trustless Ledger (using event logs) | 
+| **Developer Benefits** | Open Source, fully composable with other Web3 primitives, Multi-Chain Ready via the MCP server, and Production-Ready. | **Open Source** & **MCP Server** | 
+| **Enterprise Monitoring** | Provides continuous, automated monitoring of transactions, queries, and smart contract performance—enabling enterprise-level reliability and observability. | **MCP Server** & **Blockscout SDK** |
+
+### ⛓️ Blockchain Infrastructure, Ownership & Access
+
+The foundation of EchoLink is a robust Web3 infrastructure built on the Ethereum Sepolia testnet.
+
+* **Deployment**: Deployed in **Ethereum Sepolia testnet**.
+
+* **EchoNFT Contract**: **ERC-721 EchoNFT contract** for ownership and access control.
+
+* **Payment Integration**: **ERC-20 PYUSD integration** for standardized payments.
+
+* **Ownership & Access Control**:
+
+  * **Owned Echos**: Unlimited queries for owners (bypasses payment validation).
+
+  * **Paid Access**: Pay-per-query or credit-based access for non-owners.
+
+  * **Transferable Ownership**: Echo NFTs can be sold or transferred.
 
 ### 🎨 Creator Tools
-- Upload multiple file formats (TXT, PDF, DOCX, MP4, MOV, MP3, WAV)
-- Automatic video/audio transcription using local Whisper model
-- Knowledge extraction using REBEL model
-- MeTTa knowledge graph creation
-- Vector embeddings with FAISS
-- Automatic Echo NFT minting on blockchain
 
-### 🎯 Ownership & Access Control
-- **Owned Echos**: Unlimited queries for owners (bypass payment validation)
-- **Paid Access**: Pay-per-query or credit-based access for non-owners
-- **Smart Contract**: On-chain ownership tracking with EchoNFT ERC-721 contract
-- **Transferable Ownership**: Echo NFTs can be sold or transferred
+EchoLink provides a comprehensive suite of tools for creators to turn their content into monetized Echo NFTs:
 
-### 📊 Blockscout Analytics & Monitoring
-EchoLink provides comprehensive blockchain analytics powered by Blockscout:
+1. **Multi-Format Upload**: Supports TXT, PDF, DOCX, MP4, MOV, MP3, and WAV.
 
-**AI-Powered Insights**
-- **MCP Chatbot**: Intelligent AI analyst powered by Blockscout Model Context Protocol
-- **Natural Language Queries**: Ask questions like "What's the highest performing Echo?" and get AI-reasoned answers
-- **On-Chain Intelligence**: Uses MCP tools (read_contract, get_address_info, get_token_transfers) for comprehensive blockchain analysis
-- **Trustless Ledger:** Creator earnings (net PYUSD received) and query volume are calculated using event logs (`QueryPaid`, `CreditsUsed`, `EchoPurchased`) instead of centralized metrics.
+2. **Automatic Transcription**: Uses local **Whisper model** for video/audio transcription.
 
-**Leaderboard Analytics**
-- **Real-Time Rankings**: Dynamic leaderboard showing top-performing Echos and creators based on on-chain data
-- **Blockscout Integration**: Fetches event logs (QueryPaid, CreditsUsed) directly from Blockscout MCP/API
-- **Creator Statistics**: Tracks earnings, query volume, and transaction history for each creator
-- **Price Distribution**: Visualizes knowledge pricing tiers across all Echos
+3. **Knowledge Extraction**: Uses **REBEL model** for precise fact extraction.
 
-**User Experience**
-- **Transaction Tracking**: Real-time notifications via Blockscout SDK keep users informed of payment status
-- **Explorer Integration**: Seamless links to Blockscout explorer for transaction verification
-- **Performance Dashboards**: Visual analytics on Echo performance, creator earnings, and platform activity
+4. **MeTTa Knowledge Graph Creation**.
 
-**Developer Benefits**
-- **Open Source**: Fully composable with other Web3 primitives
-- **Multi-Chain Ready**: MCP server provides unified interface across blockchain networks
-- **Production-Ready**: Enterprise-grade analytics for monitoring and optimization
+5. **Vector Embeddings** with **FAISS**.
+
+6. **Automatic Echo NFT minting** on the blockchain.
 
 ## 🏗️ Architecture
 
@@ -1070,6 +1061,8 @@ EchoLink will continue evolving with cutting-edge features:
 *   **Contract Deployed Address [QUERY PAYMENTS]:** [0xFf08e351Bf16fE0703108cf9B4AeDe3a16fd0a46](https://eth-sepolia.blockscout.com/address/0xFf08e351Bf16fE0703108cf9B4AeDe3a16fd0a46)
 
 *   **PYUSD Ethereum Sepolia Testnet [Token Address]:** 0xCaC524BcA292aaade2df8a05cC58F0a65B1B3bB9
+
+*   **Agentverse Deployment Links:** [Orchestrator Agent](https://agentverse.ai/agents/details/agent1qwvu2g779cjyna0dzcs2klw6w2s6v323xkqguypzj05vdk0xrdc3wkjp3wq/profile), [Payment Agent](https://agentverse.ai/agents/details/agent1qgmcaux67tuhrkl9cwhns0npxclvksy66yarp32j4f8zkedrhqjys597p08/profile), [Knowledge Agent](https://agentverse.ai/agents/details/agent1q2x577ul5d6r20c4alcx64pcersrusm7j4pekkce05cu22kpxz9hux72t3t/profile)
 
 ## 🎉 Acknowledgments
 

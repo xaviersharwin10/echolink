@@ -467,7 +467,7 @@ Update the relevant api keys in knowledge_agent.py, intelligent_agent.py, multia
 This section details the complete end-to-end flow for each use case in EchoLink.
 
 ### 1. Creator Minting Echo
-
+<!-- 
 ```
 [Creator] → [Frontend: CreatorStudio] → Upload PDF/Video/Audio/Text
     → [Backend: File Processing] → Extract Text (Whisper for audio/video)
@@ -480,7 +480,7 @@ This section details the complete end-to-end flow for each use case in EchoLink.
                                 → [Smart Contract: EchoNFT] → Call mintEcho()
                                     → [Blockchain: Sepolia] → Transaction Confirmed
                                         → [Frontend] → Echo Listed in Gallery ✅
-```
+``` -->
 
 ```mermaid
 graph LR
@@ -515,6 +515,7 @@ graph LR
 
 ### 2. User Accessing Paid Echo (Micro-payment with PYUSD)
 
+<!-- 
 ```
 [User] → [Frontend: EchoGallery] → Select Echo
     → [Check Ownership] → Not owned
@@ -534,10 +535,11 @@ graph LR
                                                             → [ASI:One LLM] → Synthesize answer
                                                                 → [Backend] → Return response
                                                                     → [Frontend] → Display AI answer ✅
-```
+``` -->
 
 ### 3. User Accessing Paid Echo (Using Credits)
 
+<!-- 
 ```
 [User] → [Frontend: EchoGallery] → Select Echo
     → [Check Ownership] → Not owned
@@ -553,7 +555,7 @@ graph LR
                                             → [Knowledge uAgent] → Process query (MeTTa + FAISS + ASI:One)
                                                 → [Backend] → Return synthesized answer
                                                     → [Frontend] → Display answer ✅
-```
+``` -->
 
 ```mermaid
 graph LR
@@ -640,6 +642,7 @@ graph LR
 
 ### 4. User Buying Complete Echo (Full Ownership)
 
+<!-- 
 ```
 [User] → [Frontend: EchoGallery] → Find Echo to purchase
     → [Click "Buy Echo"] → Display price (e.g., 50 PYUSD)
@@ -653,7 +656,7 @@ graph LR
                                     → [Emit EchoPurchased Event] → Transaction confirmed
                                         → [Frontend] → Update UI (Show "You Own This" badge)
                                             → [Unlimited Access Enabled] → No payment needed for future queries ✅
-```
+``` -->
 
 ```mermaid
 graph LR
@@ -691,7 +694,7 @@ graph LR
 
 ### 5. User Accessing Leaderboard
 
-```
+<!-- ```
 [User] → [Frontend] → Click "🏆 Leaderboard" tab
     → [Component: EchoLeaderboard] → Load on mount
         → [Read Contract] → Call getAllTokenIds() on EchoNFT contract
@@ -703,7 +706,7 @@ graph LR
                                 → [Fetch Creator Stats] → GET account txlist for top 5 creators
                                     → [Sort & Display] → Show rankings, charts, price distribution
                                         → [User Views] → Leaderboard with live on-chain data ✅
-```
+``` -->
 
 ```mermaid
 graph LR
@@ -751,7 +754,7 @@ graph LR
 
 ### 6. User Accessing AI Analyst Chatbot (Blockscout MCP)
 
-```
+<!-- ```
 [User] → [Frontend] → Click floating AI button (bottom-right)
     → [Component: DiscoveryPage] → AI Analyst chatbot opens
         → [User] → Type question (e.g., "What's the highest performing Echo?")
@@ -765,7 +768,7 @@ graph LR
                                         → [ASI:One LLM] → Process data and generate insights
                                             → [Backend] → Return natural language answer + charts
                                                 → [Frontend] → Display AI analysis with visualizations ✅
-```
+``` -->
 ```mermaid
 graph LR
     %% Text highly simplified to avoid strict parser errors
@@ -806,7 +809,7 @@ graph LR
 
 ### 7. User Buying Credits
 
-```
+<!-- ```
 [User] → [Frontend] → Click "💳 Credits" tab
     → [Component: CreditManager] → Display current credit balance
         → [User] → Enter amount to purchase (e.g., 100 credits)
@@ -821,7 +824,7 @@ graph LR
                                             → [Contract] → Transfer PYUSD, mint credits to userCredits mapping
                                                 → [Emit CreditsPurchased Event] → Transaction confirmed
                                                     → [Frontend] → Refresh balance, show success message ✅
-```
+``` -->
 
 ```mermaid
 graph LR

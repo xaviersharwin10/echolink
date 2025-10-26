@@ -513,7 +513,7 @@ graph LR
     K --> L
 ```
 
-### 2. User Accessing Paid Echo (Micro-payment with PYUSD)
+### 2. User Accessing Paid Echo (Micro-payment with PYUSD / Using Credts)
 
 <!-- 
 ```
@@ -536,8 +536,6 @@ graph LR
                                                                 → [Backend] → Return response
                                                                     → [Frontend] → Display AI answer ✅
 ``` -->
-
-### 3. User Accessing Paid Echo (Using Credits)
 
 <!-- 
 ```
@@ -640,7 +638,7 @@ graph LR
     AA --> BB
 ```
 
-### 4. User Buying Complete Echo (Full Ownership)
+### 3. User Buying Complete Echo (Full Ownership)
 
 <!-- 
 ```
@@ -692,7 +690,7 @@ graph LR
     K --> L
 ```
 
-### 5. User Accessing Leaderboard
+### 4. User Accessing Leaderboard
 
 <!-- ```
 [User] → [Frontend] → Click "🏆 Leaderboard" tab
@@ -752,7 +750,7 @@ graph LR
     K --> L
 ```
 
-### 6. User Accessing AI Analyst Chatbot (Blockscout MCP)
+### 5. User Accessing AI Analyst Chatbot (Blockscout MCP)
 
 <!-- ```
 [User] → [Frontend] → Click floating AI button (bottom-right)
@@ -807,7 +805,7 @@ graph LR
     L --> M
 ```
 
-### 7. User Buying Credits
+### 6. User Buying Credits
 
 <!-- ```
 [User] → [Frontend] → Click "💳 Credits" tab

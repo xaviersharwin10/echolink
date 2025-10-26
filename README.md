@@ -475,9 +475,27 @@ cd backend/src/poc
 source venv/bin/activate
 ./start_multi_agent_system.sh
 
-
-Update the relevant api keys in knowledge_agent.py, intelligent_agent.py, multiagent_config.py, backend/index.js
+ Update the relevant API keys in knowledge_agent.py, intelligent_agent.py, multiagent_config.py, backend/index.js
 ```
+
+5. **Start Blockscout MCP Server** (for AI Analyst chatbot)
+```bash
+# Clone the Blockscout MCP server repository
+git clone https://github.com/blockscout/mcp-server.git
+cd mcp-server
+
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies (if needed)
+pip install -e .
+
+# Run the MCP server in HTTP mode with REST API
+python -m blockscout_mcp_server --http --rest --http-host 0.0.0.0 --http-port 8080
+```
+
+**Note:** The Blockscout MCP server enables the AI Analyst chatbot feature, which provides intelligent blockchain analytics and insights using the Model Context Protocol. Make sure to keep this server running alongside the application.
 
 ## 🔄 Workflow Sequences
 

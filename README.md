@@ -497,6 +497,65 @@ python -m blockscout_mcp_server --http --rest --http-host 0.0.0.0 --http-port 80
 
 **Note:** The Blockscout MCP server enables the AI Analyst chatbot feature, which provides intelligent blockchain analytics and insights using the Model Context Protocol. Make sure to keep this server running alongside the application.
 
+#### Blockscout SDK Integration
+
+To provide real-time transaction feedback and analytics, EchoLink integrates the Blockscout App SDK.
+This allows users to instantly see their transaction status and history directly inside the app — no external explorer needed.
+
+### Installation
+
+```bash
+npm install @blockscout/app-sdk
+# or
+yarn add @blockscout/app-sdk
+```
+
+### Setup
+
+Wrap your app with the SDK providers:
+
+```javascript
+import { NotificationProvider, TransactionPopupProvider } from "@blockscout/app-sdk";
+
+function App() {
+    return (
+        <NotificationProvider>
+            <TransactionPopupProvider>
+                <EchoLinkApp />
+            </TransactionPopupProvider>
+        </NotificationProvider>
+    );
+}
+```
+
+### Usage Example
+
+```javascript
+import { useNotification, useTransactionPopup } from "@blockscout/app-sdk";
+
+function EchoTxComponent() {
+    const { openTxToast } = useNotification();
+    const { openPopup } = useTransactionPopup();
+
+    const handleTx = async (txHash: string) => {
+        await openTxToast("11155111", txHash); // Sepolia testnet
+    };
+
+    const viewHistory = () => {
+        openPopup({ chainId: "11155111" });
+    };
+
+    return (
+        <div>
+            <button onClick={() => handleTx("0x123...")}>Send Transaction</button>
+            <button onClick={viewHistory}>View History</button>
+        </div>
+    );
+}
+```
+
+📘 Instructions on installation and usage available in the official (Blockscout App SDK Docs)[https://docs.blockscout.com/devs/blockscout-sdk]
+
 ## 🔄 Workflow Sequences
 
 This section details the complete end-to-end flow for each use case in EchoLink.
